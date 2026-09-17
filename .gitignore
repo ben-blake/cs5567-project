@@ -1,0 +1,152 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ---------- Virtual environments ----------
+.venv/
+venv/
+ENV/
+env/
+.python-version
+Pipfile.lock
+
+# ---------- Testing / coverage / linting ----------
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.cache
+.mypy_cache/
+.dmypy.json
+.pyre/
+.ruff_cache/
+
+# ---------- Jupyter / Colab ----------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+profile_default/
+ipython_config.py
+# Colab/Drive sync artifacts
+*.ipynb.txt
+
+# ---------- Datasets ----------
+# MOT16, Market-1501 and any other corpora are downloaded, never committed.
+data/
+datasets/
+MOT16/
+MOT16*/
+Market-1501*/
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# ---------- Model weights & checkpoints ----------
+# Required by the assignment: do not commit model weights.
+weights/
+checkpoints/
+runs/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.pb
+*.h5
+*.hdf5
+*.safetensors
+*.tflite
+*.joblib
+*.pkl
+*.pickle
+*.npz
+
+# ---------- Experiment tracking & logs ----------
+logs/
+lightning_logs/
+wandb/
+mlruns/
+outputs/
+events.out.tfevents.*
+*.log
+
+# ---------- Generated media (tracking videos, frames) ----------
+# Commit the final deliverable deliberately with `git add -f`.
+results/
+output/
+frames/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# ---------- Report build artifacts (LaTeX / Overleaf) ----------
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+
+# ---------- Secrets & local config ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+kaggle.json
+
+# ---------- Editors & IDEs ----------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- OS ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
