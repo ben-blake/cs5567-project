@@ -19,10 +19,10 @@ Approvals are not required, so you can merge your own PR once it's ready. Still
 open one — it gives everyone a place to see and comment on the change. Branches
 delete themselves after merge.
 
-PRs are **squash merged**: every commit on your branch collapses into a single
-commit on `main`, and the **PR title becomes that commit's message**. So give the
-PR a Conventional Commit title (`feat: add Siamese training loop`) — commits
-within your branch can be as messy as you like.
+PRs are **merged with a merge commit**: every commit on your branch is preserved
+on `main`. Keep your branch's history tidy — one commit per logical change,
+following the convention below — since all of it becomes part of the project
+history.
 
 ## Branch names
 
