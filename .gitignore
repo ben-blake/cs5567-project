@@ -1,22 +1,26 @@
+# Directory patterns below are anchored with a leading slash so they match
+# only at the repository root. Without it, a pattern like `data/` also matches
+# `src/mot/data/` and silently keeps source files out of commits.
+
 # ---------- Python ----------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
+/build/
+/develop-eggs/
+/dist/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -54,8 +58,8 @@ ipython_config.py
 
 # ---------- Datasets ----------
 # MOT16, Market-1501 and any other corpora are downloaded, never committed.
-data/
-datasets/
+/data/
+/datasets/
 MOT16/
 MOT16*/
 Market-1501*/
@@ -68,9 +72,9 @@ Market-1501*/
 
 # ---------- Model weights & checkpoints ----------
 # Required by the assignment: do not commit model weights.
-weights/
-checkpoints/
-runs/
+/weights/
+/checkpoints/
+/runs/
 *.pt
 *.pth
 *.ckpt
@@ -86,19 +90,19 @@ runs/
 *.npz
 
 # ---------- Experiment tracking & logs ----------
-logs/
-lightning_logs/
-wandb/
-mlruns/
-outputs/
+/logs/
+/lightning_logs/
+/wandb/
+/mlruns/
+/outputs/
 events.out.tfevents.*
 *.log
 
 # ---------- Generated media (tracking videos, frames) ----------
 # Commit the final deliverable deliberately with `git add -f`.
-results/
-output/
-frames/
+/results/
+/output/
+/frames/
 *.mp4
 *.avi
 *.mov
