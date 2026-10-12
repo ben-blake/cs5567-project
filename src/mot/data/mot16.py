@@ -44,7 +44,7 @@ class Box:
     y2: float
 
     @classmethod
-    def from_xywh(cls, x: float, y: float, w: float, h: float) -> "Box":
+    def from_xywh(cls, x: float, y: float, w: float, h: float) -> Box:
         return cls(x, y, x + w, y + h)
 
     @property
@@ -62,7 +62,7 @@ class Box:
     def as_xyxy(self) -> tuple[float, float, float, float]:
         return (self.x1, self.y1, self.x2, self.y2)
 
-    def clip(self, width: int, height: int) -> "Box":
+    def clip(self, width: int, height: int) -> Box:
         """Clamp to an image of the given size."""
         return Box(
             max(0.0, min(self.x1, width)),
@@ -223,4 +223,8 @@ class Sequence:
 def find_sequences(root: str | Path) -> list[Sequence]:
     """Every sequence directory under ``root`` (e.g. ``MOT16/train``)."""
     root = Path(root)
-    return [Sequence(child) for child in sorted(root.iterdir()) if (child / "seqinfo.ini").is_file()]
+    return [
+        Sequence(child)
+        for child in sorted(root.iterdir())
+        if (child / "seqinfo.ini").is_file()
+    ]

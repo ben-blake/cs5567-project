@@ -95,6 +95,8 @@ class ReIDPairDataset(Dataset):
         pairs_per_epoch: int = 10_000,
         positive_ratio: float = 0.5,
         seed: int = 0,
+        cameras: dict[Path, int] | None = None,
+        prefer_cross_camera: bool = True,
     ):
         # An identity needs two crops to form a positive pair.
         self.identities = {k: v for k, v in identities.items() if len(v) >= 2}
@@ -105,7 +107,37 @@ class ReIDPairDataset(Dataset):
         self.transform = transform
         self.pairs_per_epoch = pairs_per_epoch
         self.positive_ratio = positive_ratio
+        self.cameras = cameras or {}
+        self.prefer_cross_camera = prefer_cross_camera and bool(self.cameras)
         self._rng = random.Random(seed)
+
+    def _positive_pair(self, identity: int) -> tuple[Path, Path]:
+        """Two crops of one person, from different cameras where possible.
+
+        Two crops from the same camera seconds apart share pose, lighting and
+        background, so matching them is nearly trivial and the network can
+        succeed by memorising the background instead of the person. Market-1501
+        evaluation treats same-camera matches as junk for exactly this reason
+        (Zheng et al., ICCV 2015, Sec. 3), so we train the way it scores.
+        """
+        crops = self.identities[identity]
+        if not self.prefer_cross_camera:
+            first, second = self._rng.sample(crops, 2)
+            return first, second
+
+        first = self._rng.choice(crops)
+        other_camera = [
+            path
+            for path in crops
+            if path is not first
+            and self.cameras.get(path, -1) != self.cameras.get(first, -2)
+        ]
+        if other_camera:
+            return first, self._rng.choice(other_camera)
+
+        # Only one camera saw this person; fall back to any other crop.
+        remaining = [path for path in crops if path is not first]
+        return first, self._rng.choice(remaining)
 
     def __len__(self) -> int:
         return self.pairs_per_epoch
@@ -122,8 +154,7 @@ class ReIDPairDataset(Dataset):
         same = self._rng.random() < self.positive_ratio
 
         if same:
-            identity = self._rng.choice(self.ids)
-            first, second = self._rng.sample(self.identities[identity], 2)
+            first, second = self._positive_pair(self._rng.choice(self.ids))
         else:
             id_a, id_b = self._rng.sample(self.ids, 2)
             first = self._rng.choice(self.identities[id_a])
@@ -132,11 +163,35 @@ class ReIDPairDataset(Dataset):
         return self._load(first), self._load(second), torch.tensor(1.0 if same else 0.0)
 
 
-def market1501_identities(root: str | Path, split: str = "bounding_box_train") -> dict[int, list[Path]]:
+def parse_market1501_filename(name: str) -> tuple[int, int] | None:
+    """``0002_c1s1_000451_03.jpg`` -> ``(person_id, camera_id)``.
+
+    Returns None when the name does not parse.
+    """
+    parts = name.split("_")
+    if len(parts) < 2 or not parts[1].startswith("c"):
+        return None
+    try:
+        person_id = int(parts[0])
+        # "c1s1" -> camera 1, sequence 1. Take the digits after "c".
+        camera_id = int(parts[1][1 : parts[1].index("s")] if "s" in parts[1] else parts[1][1:])
+    except ValueError:
+        return None
+    return person_id, camera_id
+
+
+def market1501_identities(
+    root: str | Path, split: str = "bounding_box_train"
+) -> dict[int, list[Path]]:
     """Index Market-1501 crops by person id.
 
-    Filenames look like ``0002_c1s1_000451_03.jpg``; the leading field is the
-    identity. Id ``-1`` marks distractors and is dropped.
+    Filenames look like ``0002_c1s1_000451_03.jpg``.
+
+    Two identity labels are *not* people and are dropped (Zheng et al., ICCV
+    2015, Sec. 3): ``-1`` marks **junk** boxes, where the detector overlapped a
+    real person by only 20-50%, and ``0000`` marks **distractors** -- false
+    alarms on background, with under 20% overlap. Training on either teaches
+    the network that background crops are a person worth matching.
     """
     directory = Path(root) / split
     if not directory.is_dir():
@@ -144,14 +199,24 @@ def market1501_identities(root: str | Path, split: str = "bounding_box_train") -
 
     identities: dict[int, list[Path]] = {}
     for path in sorted(directory.glob("*.jpg")):
-        try:
-            person_id = int(path.name.split("_")[0])
-        except ValueError:
+        parsed = parse_market1501_filename(path.name)
+        if parsed is None:
             continue
-        if person_id < 0:
+        person_id, _camera = parsed
+        if person_id <= 0:  # -1 junk, 0000 distractor
             continue
         identities.setdefault(person_id, []).append(path)
     return identities
+
+
+def market1501_cameras(paths: list[Path]) -> dict[Path, int]:
+    """Camera id for each Market-1501 crop, for cross-camera pair sampling."""
+    cameras = {}
+    for path in paths:
+        parsed = parse_market1501_filename(path.name)
+        if parsed is not None:
+            cameras[path] = parsed[1]
+    return cameras
 
 
 def export_mot16_crops(
@@ -174,11 +239,11 @@ def export_mot16_crops(
     )
     exported: dict[int, list[Path]] = {}
 
-    for track_id, annotations in by_track.items():
+    for track_id, track_annotations in by_track.items():
         # Even sampling across the track beats taking the first N frames,
         # which would all look nearly identical.
-        step = max(1, len(annotations) // max_per_identity)
-        for annotation in annotations[::step][:max_per_identity]:
+        step = max(1, len(track_annotations) // max_per_identity)
+        for annotation in track_annotations[::step][:max_per_identity]:
             box = annotation.box
             if box.height < min_height:
                 continue

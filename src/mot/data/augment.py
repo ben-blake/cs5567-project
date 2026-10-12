@@ -51,24 +51,62 @@ class DetectionTransform:
         return to_tensor(image), target
 
 
-def reid_transform(train: bool = True) -> T.Compose:
+class GaussianMask:
+    """Down-weight pixels far from the image centre.
+
+    Zheng et al. (ICCV 2015, Sec. 4.3) report +5.64% mAP on Market-1501 from
+    this alone: "the prior that pedestrian is roughly located in the center of
+    the image is statistically sound". A detector crop is a box around a
+    person, so the person occupies the middle and the corners are background.
+
+    This is why we do *not* need a background-stripped dataset variant: we keep
+    real backgrounds, which match the MOT16 frames we run on, and suppress them
+    with a spatial prior instead.
+    """
+
+    def __init__(self, sigma_scale: float = 0.25, strength: float = 1.0):
+        self.sigma_scale = sigma_scale
+        self.strength = strength
+        self._cache: dict[tuple[int, int], torch.Tensor] = {}
+
+    def _mask(self, height: int, width: int) -> torch.Tensor:
+        key = (height, width)
+        if key not in self._cache:
+            ys = torch.linspace(-0.5, 0.5, height).view(-1, 1)
+            xs = torch.linspace(-0.5, 0.5, width).view(1, -1)
+            sigma = self.sigma_scale
+            mask = torch.exp(-(ys**2 + xs**2) / (2 * sigma**2))
+            # strength=0 disables the mask, 1 applies it fully.
+            self._cache[key] = (1 - self.strength) + self.strength * mask
+        return self._cache[key]
+
+    def __call__(self, image: torch.Tensor) -> torch.Tensor:
+        return image * self._mask(image.shape[-2], image.shape[-1])
+
+
+def reid_transform(train: bool = True, gaussian_mask: bool = False) -> T.Compose:
     """Crop pipeline for the Siamese network.
 
     Random erasing simulates occlusion, which is exactly when re-id has to work
     hardest -- a partly hidden person must still match their earlier appearance.
     """
     height, width = CROP_SIZE
+    mask = [GaussianMask()] if gaussian_mask else []
 
     if not train:
-        return T.Compose([T.Resize((height, width)), T.ToTensor()])
+        return T.Compose([T.Resize((height, width)), T.ToTensor(), *mask])
 
     return T.Compose(
         [
+            # Resize larger then random-crop: simulates the detector
+            # misalignment that Market-1501's DPM boxes exhibit, and that our
+            # Faster R-CNN boxes will too.
             T.Resize((height + 16, width + 8)),
             T.RandomCrop((height, width)),
             T.RandomHorizontalFlip(),
             T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05),
             T.ToTensor(),
             T.RandomErasing(p=0.4, scale=(0.02, 0.2)),
+            *mask,
         ]
     )
