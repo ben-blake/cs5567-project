@@ -68,6 +68,9 @@ See [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) for the full requir
 
 | Document                                                 | Contents                                                                 |
 | -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md)                       | How to run the notebook, make the demo video, build the slides            |
+| [docs/ROLES.md](docs/ROLES.md)                           | Who owns what, presentation split, timeline                              |
+| [docs/MEETING.md](docs/MEETING.md)                       | Agenda for the midterm planning meeting                                  |
 | [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) | Project brief, assignment requirements, implementation guidance, rubric  |
 | [docs/reference/RCNN.md](docs/reference/RCNN.md)         | Reference deck: R-CNN → Fast R-CNN → Faster R-CNN → Mask R-CNN, and YOLO |
 
