@@ -1,219 +1,238 @@
-% Midterm presentation — COMP-SCI 5567 Group 4
-% Build:  latexmk -pdf midterm.tex     (or let CI do it)
+% Midterm presentation, COMP-SCI 5567 Group 4
+% Build:  latexmk -xelatex midterm.tex   (or let CI do it)
 \documentclass[aspectratio=169,11pt]{beamer}
 
 \usetheme{metropolis}
+% Filled blocks: without this, metropolis renders a block title flush against
+% its body text and the two run together on screen.
+\metroset{block=fill}
+
 \usepackage{booktabs}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, backgrounds, calc}
+\usetikzlibrary{arrows.meta, positioning, calc}
 \usepackage{xcolor}
 
 \definecolor{umkcblue}{HTML}{005583}
 \definecolor{accent}{HTML}{E08B2E}
-\definecolor{ok}{HTML}{2E8B57}
 \setbeamercolor{frametitle}{bg=umkcblue}
 \setbeamercolor{progress bar}{fg=accent}
 
 \title{Video Object Tracking on MOT16}
 \subtitle{Faster R-CNN detection with Siamese re-identification}
 \author{Ben Blake \and Geethika Padamati \and Tina Nguyen \and Sanjana Aileni}
-\institute{Group 4 \\ COMP-SCI 5567 --- Deep Learning \\ University of Missouri--Kansas City}
+\institute{Group 4 \\ COMP-SCI 5567, Deep Learning \\ University of Missouri--Kansas City}
 \date{Midterm Presentation}
 
-% Pipeline box styles, reused across diagrams.
+% Shared node styles. Widths are kept small so the pipeline diagram fits
+% inside the text block at 16:9.
 \tikzset{
-  stage/.style={rectangle, rounded corners=3pt, draw=umkcblue, fill=umkcblue!8,
-                text width=2.5cm, align=center, minimum height=1.1cm, font=\small},
-  io/.style={rectangle, rounded corners=3pt, draw=gray!60, fill=gray!10,
-             text width=2.1cm, align=center, minimum height=1.0cm, font=\small},
-  flow/.style={-{Stealth[length=2.5mm]}, thick, draw=gray!70},
+  stage/.style={rectangle, rounded corners=2pt, draw=umkcblue, fill=umkcblue!8,
+                text width=1.85cm, align=center, minimum height=1.0cm, font=\scriptsize},
+  io/.style={rectangle, rounded corners=2pt, draw=gray!60, fill=gray!10,
+             text width=1.6cm, align=center, minimum height=1.0cm, font=\scriptsize},
+  flow/.style={-{Stealth[length=2mm]}, thick, draw=gray!70},
 }
 
 \begin{document}
 
 \maketitle
 
-% ─────────────────────────────────────────────── Ben: problem and system
+% ─────────────────────────────────────────── Ben: problem and system
 \begin{frame}{The team and the split}
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
-      \textbf{Ben Blake} --- detection \& tracking \\
+      \textbf{Ben Blake}, detection and tracking \\
       {\small Faster R-CNN, data association, integration}
-      \vspace{0.6em}
+      \vspace{0.7em}
 
-      \textbf{Geethika Padamati} --- data pipeline \\
+      \textbf{Geethika Padamati}, data pipeline \\
       {\small MOT16 parsing, datasets, augmentation}
     \column{0.5\textwidth}
-      \textbf{Tina Nguyen} --- re-identification \\
+      \textbf{Tina Nguyen}, re-identification \\
       {\small Siamese network, contrastive loss}
-      \vspace{0.6em}
+      \vspace{0.7em}
 
-      \textbf{Sanjana Aileni} --- evaluation \& demo \\
+      \textbf{Sanjana Aileni}, evaluation and demo \\
       {\small Metrics, visualization, result video}
   \end{columns}
-  \vspace{1.2em}
+  \vspace{1.4em}
   \hrule
-  \vspace{0.8em}
-  Each of us owns one module end to end --- its code, its slides, its section of
-  the report.
+  \vspace{0.9em}
+  Each of us owns one module end to end: its code, its slides, and its section
+  of the report.
 \end{frame}
 
 \begin{frame}{The problem}
   \textbf{Given} a video, \textbf{produce} a box around each pedestrian in every
   frame, with the \alert{same identity number} following the same person.
-  \vspace{1em}
+  \vspace{1.2em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.5\textwidth}
-      \textbf{Detection alone is not enough}
+    \column{0.47\textwidth}
+      \textbf{Detection is not enough}
+      \vspace{0.3em}
 
-      A detector answers \emph{``where are the people?''} independently in each
-      frame. It has no notion that the person in frame 10 is the person from
+      A detector answers ``where are the people'' separately in each frame. It
+      has no way of knowing that the person in frame 10 is the person it saw in
       frame 9.
-    \column{0.5\textwidth}
-      \textbf{Tracking adds identity over time}
+    \column{0.47\textwidth}
+      \textbf{Tracking adds identity}
+      \vspace{0.3em}
 
-      We must link detections across frames --- through occlusion, through
-      people crossing, through the detector missing a frame entirely.
+      We have to link detections across frames, through occlusion, through
+      people crossing, and through frames where the detector misses someone
+      entirely.
   \end{columns}
-  \vspace{1em}
-  \begin{alertblock}{Target (course rubric)}
-    Track at least one target pedestrian across an MOT16 test sequence without
-    losing it.
+  \vspace{1.2em}
+
+  \begin{alertblock}{Target}
+    Track at least one pedestrian across an MOT16 test sequence without losing
+    it (course rubric, grade A).
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Why this matters}
+\begin{frame}{Why tracking matters}
   \begin{columns}[T,onlytextwidth]
     \column{0.52\textwidth}
       \begin{itemize}
-        \item \textbf{Autonomous driving} --- a pedestrian that changes ID is a
-              pedestrian whose trajectory you cannot predict
-        \item \textbf{Surveillance and safety} --- counting, flow, anomalies
-        \item \textbf{Sports analytics} --- per-player statistics require
-              per-player identity
-        \item \textbf{Retail and robotics} --- movement patterns, navigation
+        \item \textbf{Autonomous driving.} A pedestrian whose ID changes is a
+              pedestrian whose path you cannot predict.
+        \item \textbf{Surveillance and safety.} Counting, flow analysis,
+              anomaly detection.
+        \item \textbf{Sports analytics.} Per-player statistics need per-player
+              identity.
+        \item \textbf{Retail and robotics.} Movement patterns, navigation.
       \end{itemize}
     \column{0.44\textwidth}
-      \begin{block}{The common thread}
-        Every application needs \emph{identity}, not just location. Knowing
-        \emph{someone} is at a position is rarely enough --- you need to know
-        \emph{who}, and for how long.
+      \begin{block}{What they share}
+        All of these need identity, not just location. Knowing that somebody is
+        standing at a position is rarely useful on its own. You need to know
+        which person, and for how long.
       \end{block}
   \end{columns}
 \end{frame}
 
 \begin{frame}{System architecture}
   \centering
-  \begin{tikzpicture}[node distance=0.85cm]
-    \node[io] (frames) {Video frames};
-    \node[stage, right=of frames] (detect) {Faster R-CNN\\\textsc{detection}};
-    \node[stage, right=of detect] (crop) {Crop \& embed\\\textsc{siamese}};
-    \node[stage, right=of crop] (assoc) {Association\\\textsc{hungarian}};
-    \node[io, right=of assoc] (out) {Tracked video};
+  \begin{tikzpicture}[node distance=0.52cm]
+    \node[io]                        (frames) {Video\\frames};
+    \node[stage, right=of frames]    (detect) {Faster R-CNN\\\textsc{detection}};
+    \node[stage, right=of detect]    (crop)   {Crop and embed\\\textsc{siamese}};
+    \node[stage, right=of crop]      (assoc)  {Association\\\textsc{hungarian}};
+    \node[io,    right=of assoc]     (out)    {Tracked\\video};
 
     \draw[flow] (frames) -- (detect);
-    \draw[flow] (detect) -- node[above, font=\scriptsize] {boxes} (crop);
-    \draw[flow] (crop) -- node[above, font=\scriptsize] {embeddings} (assoc);
-    \draw[flow] (assoc) -- node[above, font=\scriptsize] {IDs} (out);
+    \draw[flow] (detect) -- (crop);
+    \draw[flow] (crop)   -- (assoc);
+    \draw[flow] (assoc)  -- (out);
 
-    \node[below=0.35cm of detect, font=\scriptsize, text width=2.6cm, align=center]
-      {\emph{where} are people?};
-    \node[below=0.35cm of crop, font=\scriptsize, text width=2.6cm, align=center]
-      {\emph{what} do they look like?};
-    \node[below=0.35cm of assoc, font=\scriptsize, text width=2.6cm, align=center]
-      {\emph{who} is who?};
+    % Annotations sit below the row so nothing collides with the arrows.
+    \node[below=0.3cm of detect, font=\scriptsize, text width=2.1cm, align=center]
+      {boxes \\ \emph{where} are they?};
+    \node[below=0.3cm of crop, font=\scriptsize, text width=2.1cm, align=center]
+      {embeddings \\ \emph{what} do they look like?};
+    \node[below=0.3cm of assoc, font=\scriptsize, text width=2.1cm, align=center]
+      {IDs \\ \emph{who} is who?};
   \end{tikzpicture}
-  \vspace{1.2em}
+  \vspace{1.6em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.48\textwidth}
+    \column{0.47\textwidth}
       \textbf{Offline tracking.} We process a batch of frames rather than
-      streaming, which lets us recover from short occlusions.
-    \column{0.48\textwidth}
-      \textbf{Tracking by detection.} Detection and identity are separate
-      problems; separating them lets us swap either component independently.
-    \end{columns}
+      streaming them, which lets us recover from short occlusions.
+    \column{0.47\textwidth}
+      \textbf{Tracking by detection.} Detection and identity stay separate, so
+      either component can be replaced without touching the other.
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Detection: Faster R-CNN}
   \begin{columns}[T,onlytextwidth]
-    \column{0.55\textwidth}
+    \column{0.54\textwidth}
       \textbf{Why this model}
       \begin{itemize}
-        \item Region Proposal Network makes proposals \emph{inside} the network
-              --- no external Selective Search
-        \item Proposals and detection share one backbone, so the image is
+        \item The Region Proposal Network generates proposals inside the
+              network, so we do not need Selective Search
+        \item Proposals and detection share one backbone, so each image is
               convolved once
-        \item Accurate on small objects --- distant pedestrians are small
+        \item Good accuracy on small objects, which matters because distant
+              pedestrians are small
       \end{itemize}
-      \vspace{0.5em}
+      \vspace{0.6em}
       \textbf{Few-shot fine-tuning}
 
-      We freeze the ResNet50-FPN backbone and train only the heads, as the
-      assignment suggests.
+      We freeze the ResNet50-FPN backbone and train only the detection heads,
+      following the approach in the assignment.
     \column{0.42\textwidth}
       \begin{block}{Parameter budget}
         \begin{tabular}{lr}
           \toprule
-          Total      & 41.3\,M \\
-          Frozen     & 26.8\,M \\
+          Total              & 41.3\,M \\
+          Frozen             & 26.8\,M \\
           \textbf{Trainable} & \textbf{14.5\,M} \\
           \bottomrule
         \end{tabular}
-        \vspace{0.4em}
+        \vspace{0.5em}
 
-        {\footnotesize 35\% trainable --- fits comfortably in Colab's VRAM.}
+        {\footnotesize Training 35\% of the parameters keeps the job inside
+        Colab's memory budget.}
       \end{block}
   \end{columns}
 \end{frame}
 
 \begin{frame}{The association problem}
-  Each frame gives $N$ detections; we hold $M$ existing tracks. Which detection
+  Each frame gives $N$ detections and we are holding $M$ tracks. Which detection
   continues which track?
-  \vspace{0.8em}
+  \vspace{0.9em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.47\textwidth}
+    \column{0.45\textwidth}
       \textbf{Overlap alone fails}
+      \vspace{0.2em}
 
-      When two people cross, their boxes overlap each other's previous
-      position. Position cannot tell them apart.
-      \vspace{0.6em}
+      When two people cross, each box overlaps the other's previous position,
+      so position cannot separate them.
+      \vspace{0.8em}
 
       \textbf{Appearance alone fails}
+      \vspace{0.2em}
 
-      Two people in similar clothing look alike. Appearance drifts.
-    \column{0.49\textwidth}
+      Two people in similar clothing produce similar embeddings, and appearance
+      drifts as someone turns.
+    \column{0.50\textwidth}
       \begin{block}{Blended cost}
+        \vspace{-0.4em}
         \[
-          C_{ij} = (1-\lambda)\underbrace{(1 - \mathrm{IoU}_{ij})}_{\text{where}}
-                 + \lambda \underbrace{(1 - \cos(e_i, e_j))}_{\text{what}}
+          C_{ij} = (1-\lambda)\underbrace{(1 - \mathrm{IoU}_{ij})}_{\text{position}}
+                 + \lambda \underbrace{(1 - \cos(e_i, e_j))}_{\text{appearance}}
         \]
-        Solved with the Hungarian algorithm for a globally optimal one-to-one
-        assignment. Pairs failing either gate are forbidden outright.
+        \vspace{-0.5em}
+
+        {\footnotesize Minimised with the Hungarian algorithm, which gives a
+        globally optimal one-to-one assignment. Pairs that fail either the IoU
+        or the appearance gate are rejected before matching.}
       \end{block}
   \end{columns}
-  \vspace{0.5em}
+  \vspace{0.7em}
   {\footnotesize A track survives \texttt{max\_age} unmatched frames, so a brief
-  occlusion does not spawn a new identity.}
+  occlusion does not create a new identity.}
 \end{frame}
 
-% ─────────────────────────────────────────────── Geethika: data
+% ─────────────────────────────────────────── Geethika: data
 \begin{frame}{The MOT16 dataset}
   \begin{columns}[T,onlytextwidth]
-    \column{0.5\textwidth}
+    \column{0.48\textwidth}
       \begin{itemize}
-        \item 14 sequences --- 7 train (with ground truth), 7 test
-        \item Crowded streets, moving and static cameras
-        \item Heavy occlusion; people leave and re-enter frame
+        \item 14 sequences: 7 training with ground truth, 7 test
+        \item Crowded streets, both moving and static cameras
+        \item Heavy occlusion, with people leaving and re-entering the frame
       \end{itemize}
-      \vspace{0.6em}
+      \vspace{0.9em}
       \textbf{One annotation row}
       \vspace{0.3em}
 
       {\footnotesize\texttt{1, 3, 586, 447, 85, 263, 1, 1, 1}}
-    \column{0.47\textwidth}
+    \column{0.48\textwidth}
       \begin{block}{Columns}
         {\footnotesize
         \begin{tabular}{ll}
@@ -223,7 +242,7 @@
           \texttt{bb\_top}    & 447 \\
           \texttt{bb\_width}  & 85 \\
           \texttt{bb\_height} & 263 \\
-          \texttt{conf}       & 1 (0 = ignore) \\
+          \texttt{conf}       & 1 (0 means ignore) \\
           \texttt{class}      & 1 (pedestrian) \\
           \texttt{visibility} & 1.0 \\
         \end{tabular}}
@@ -233,87 +252,88 @@
 
 \begin{frame}{Two traps in the annotations}
   \begin{columns}[T,onlytextwidth]
-    \column{0.48\textwidth}
+    \column{0.47\textwidth}
       \begin{alertblock}{Coordinates are 1-indexed}
-        The files count pixels from 1; NumPy counts from 0. Ignoring this
-        shifts every box by one pixel --- small enough to pass review, large
-        enough to quietly cost IoU.
+        The files count pixels from 1 and NumPy counts from 0. If you miss
+        this, every box is off by one pixel. The output still looks correct,
+        but IoU drops and the metrics get worse for no visible reason.
       \end{alertblock}
-    \column{0.48\textwidth}
+    \column{0.47\textwidth}
       \begin{alertblock}{Not every person is a target}
-        Class 7 (static person), 8 (distractor) and 12 (reflection) are people
-        but are \emph{not} scored. Training on them teaches the detector to
-        fire on mannequins and mirrors.
+        Classes 7, 8 and 12 (static person, distractor, reflection) are people
+        but are not scored. Training on them teaches the detector to fire on
+        mannequins and reflections.
       \end{alertblock}
   \end{columns}
-  \vspace{1em}
-  Both are handled in \texttt{mot/data/mot16.py} and covered by unit tests ---
-  these are exactly the bugs that are invisible until the metrics are
-  inexplicably bad.
+  \vspace{1.1em}
+  Both are handled in \texttt{mot/data/mot16.py} and covered by unit tests. We
+  wrote the tests first because neither failure produces an obvious symptom.
 \end{frame}
 
 \begin{frame}{Data augmentation}
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
-      A handful of scenes means the real risk is \emph{memorising those scenes}
-      rather than learning what a pedestrian looks like.
-      \vspace{0.6em}
+      MOT16 gives us a small number of scenes, so the model can memorise those
+      scenes instead of learning what a pedestrian looks like.
+      \vspace{0.8em}
 
       \textbf{Detection}
       \begin{itemize}
-        \item Horizontal flip (boxes mirrored with the image)
-        \item Colour jitter --- brightness, contrast, saturation
+        \item Horizontal flip, with boxes mirrored to match
+        \item Colour jitter on brightness, contrast and saturation
       \end{itemize}
-      \vspace{0.4em}
+      \vspace{0.5em}
       \textbf{Re-ID crops}
       \begin{itemize}
-        \item Random crop and flip
-        \item Random erasing --- simulated occlusion
+        \item Random crop and horizontal flip
+        \item Random erasing, which simulates occlusion
       \end{itemize}
-    \column{0.46\textwidth}
-      \begin{block}{What we deliberately do \emph{not} do}
-        No vertical flips or large rotations. Pedestrians are upright in every
-        frame of every sequence; training on upside-down people teaches a pose
-        the model will never encounter and wastes capacity.
+    \column{0.45\textwidth}
+      \begin{block}{What we leave out}
+        No vertical flips and no large rotations. Pedestrians are upright in
+        every frame of every sequence, so an upside-down person is a pose the
+        model will never see at test time.
       \end{block}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────────── Tina: re-identification
+% ─────────────────────────────────────────── Tina: re-identification
 \begin{frame}{Re-identification}
-  \textbf{The question:} do these two crops, from different frames, show the
-  same person?
-  \vspace{0.8em}
+  \textbf{The question:} do these two crops, taken from different frames, show
+  the same person?
+  \vspace{1.0em}
 
   \begin{columns}[T,onlytextwidth]
     \column{0.47\textwidth}
-      \begin{block}{Naive approach: classification}
+      \begin{block}{Classification does not work}
         Train a classifier over the people in the video.
 
-        \alert{Fails:} every new person entering the scene requires retraining,
-        and MOT16 sequences are full of people entering.
+        \vspace{0.3em}
+        Every new person who walks into the scene needs the model retrained,
+        and MOT16 sequences are full of people walking in.
       \end{block}
-    \column{0.49\textwidth}
-      \begin{block}{Our approach: a similarity model}
-        Learn an \emph{embedding} where the same person lands close together
-        and different people land far apart.
+    \column{0.47\textwidth}
+      \begin{block}{A similarity model does}
+        Learn an embedding where crops of one person land close together and
+        crops of different people land far apart.
 
-        \textbf{Never needs retraining} for new people --- it learned
-        similarity, not a fixed list of identities.
+        \vspace{0.3em}
+        New people need no retraining, because the model learned similarity
+        rather than a fixed list of identities.
       \end{block}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Siamese network}
   \centering
-  \begin{tikzpicture}[node distance=0.7cm]
-    \node[io] (a) {Crop A};
-    \node[io, below=1.1cm of a] (b) {Crop B};
-    \node[stage, right=1.1cm of a] (cnna) {Shared CNN};
-    \node[stage, right=1.1cm of b] (cnnb) {Shared CNN};
-    \node[io, right=1.0cm of cnna] (ea) {$e_A$};
-    \node[io, right=1.0cm of cnnb] (eb) {$e_B$};
-    \node[stage, right=1.4cm of $(ea)!0.5!(eb)$] (d) {Distance\\$\Vert e_A - e_B\Vert$};
+  \begin{tikzpicture}[node distance=0.65cm]
+    \node[io]                              (a)    {Crop A};
+    \node[io, below=1.2cm of a]            (b)    {Crop B};
+    \node[stage, right=1.0cm of a]         (cnna) {Shared CNN};
+    \node[stage, right=1.0cm of b]         (cnnb) {Shared CNN};
+    \node[io, right=0.9cm of cnna]         (ea)   {$e_A$};
+    \node[io, right=0.9cm of cnnb]         (eb)   {$e_B$};
+    \node[stage, right=1.2cm of $(ea)!0.5!(eb)$] (d) {Distance\\$\Vert e_A - e_B\Vert$};
 
     \draw[flow] (a) -- (cnna);
     \draw[flow] (b) -- (cnnb);
@@ -321,112 +341,112 @@
     \draw[flow] (cnnb) -- (eb);
     \draw[flow] (ea) -- (d);
     \draw[flow] (eb) -- (d);
-    \draw[<->, dashed, thick, accent] (cnna) -- node[right, font=\scriptsize] {same weights} (cnnb);
+    \draw[<->, dashed, thick, accent] (cnna) --
+      node[right, font=\scriptsize] {same weights} (cnnb);
   \end{tikzpicture}
-  \vspace{0.8em}
+  \vspace{1.0em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.46\textwidth}
-      {\footnotesize
-      4 conv blocks $\rightarrow$ adaptive pool $\rightarrow$ 128-d embedding,
-      L2-normalised. 1.5\,M parameters --- small enough to train in minutes.}
+    \column{0.44\textwidth}
+      {\footnotesize Four convolution blocks, then adaptive pooling, then a
+      128-dimensional L2-normalised embedding. 1.5\,M parameters, so it trains
+      in a few minutes.}
     \column{0.50\textwidth}
       \begin{block}{Contrastive loss}
-        \vspace{-0.6em}
+        \vspace{-0.7em}
         \[
           L = \tfrac12\left[ y\,d^2 + (1-y)\max(0, m - d)^2 \right]
         \]
-        \vspace{-0.8em}
+        \vspace{-0.7em}
 
-        {\footnotesize Pull matching pairs together; push different pairs apart
-        past margin $m$.}
+        {\footnotesize Matching pairs are pulled together. Non-matching pairs
+        are pushed apart until they exceed the margin $m$.}
       \end{block}
   \end{columns}
 \end{frame}
 
 \begin{frame}{A problem we had to resolve}
-  \begin{alertblock}{The course slides contradict themselves on crop size}
-    Training is specified at $16\times16$, inference at $24\times24$, retrieved
-    crops at $30\times16$ --- and the reference \texttt{Siamese\_Network} code
-    has \texttt{nn.Linear(128 * 22 * 22, ...)}, which actually requires a
-    ${\sim}102\times102$ input. No single size satisfies all four.
+  \begin{alertblock}{The course slides give four different crop sizes}
+    Training is specified at $16\times16$, inference at $24\times24$, and
+    retrieved crops at $30\times16$. The reference \texttt{Siamese\_Network}
+    code uses \texttt{nn.Linear(128*22*22, ...)}, which requires an input of
+    roughly $102\times102$. No single size satisfies all four.
   \end{alertblock}
-  \vspace{0.5em}
+  \vspace{0.7em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.48\textwidth}
+    \column{0.47\textwidth}
       \textbf{What we chose}
       \begin{itemize}
-        \item $128\times64$ --- the standard person Re-ID aspect ratio, matching
-              Market-1501
-        \item \texttt{AdaptiveAvgPool2d} instead of a hardcoded flatten
+        \item $128\times64$, which is the resolution Market-1501 normalises
+              its own images to
+        \item \texttt{AdaptiveAvgPool2d} in place of a hardcoded flatten
       \end{itemize}
-    \column{0.48\textwidth}
+    \column{0.47\textwidth}
       \textbf{Why}
       \begin{itemize}
-        \item $16\times16$ cannot resolve clothing detail --- the entire signal
-              Re-ID depends on
-        \item Adaptive pooling makes the network accept \emph{any} input size,
-              so the contradiction cannot bite us again
+        \item At $16\times16$ there is not enough resolution to tell clothing
+              apart, which is the signal re-identification relies on
+        \item Adaptive pooling accepts any input size, so the choice is no
+              longer baked into the architecture
       \end{itemize}
   \end{columns}
 \end{frame}
 
-% ─────────────────────────────────────────────── Sanjana: evaluation and demo
+% ─────────────────────────────────────────── Sanjana: evaluation and demo
 \begin{frame}{How we measure success}
   \begin{columns}[T,onlytextwidth]
     \column{0.52\textwidth}
       \begin{block}{CLEAR-MOT metrics}
-        \vspace{-0.4em}
-        \[ \mathrm{MOTA} = 1 - \frac{\mathrm{FN} + \mathrm{FP} + \mathrm{IDSW}}{\text{ground truth}} \]
+        \vspace{-0.5em}
+        \[ \mathrm{MOTA} = 1 - \frac{\mathrm{FN} + \mathrm{FP} + \mathrm{IDSW}}{\text{ground truth boxes}} \]
         \vspace{-0.6em}
         \begin{itemize}\footnotesize
-          \item \textbf{FN} --- a person we missed
-          \item \textbf{FP} --- a box with nobody in it
-          \item \textbf{IDSW} --- the ID changed on the same person
+          \item \textbf{FN:} a person we failed to detect
+          \item \textbf{FP:} a box with nobody in it
+          \item \textbf{IDSW:} the ID changed on one person
         \end{itemize}
       \end{block}
-      \vspace{-0.3em}
-      {\footnotesize \textbf{MOTP} --- mean IoU of matched boxes: how
-      \emph{tight} the boxes are.}
+      \vspace{0.2em}
+      {\footnotesize \textbf{MOTP} is the mean IoU of matched boxes, so it
+      measures how tightly the boxes fit.}
     \column{0.44\textwidth}
-      \begin{block}{Why ID switches matter most}
-        A missed frame is recoverable. An ID switch means we have
-        \emph{confused two people} --- the one failure the whole Re-ID component
-        exists to prevent, and the one the rubric grades.
+      \begin{block}{Why ID switches matter}
+        A missed frame can be recovered on the next one. An ID switch means we
+        have confused two people, which is the failure the re-identification
+        component exists to prevent and the one the rubric grades.
       \end{block}
   \end{columns}
 \end{frame}
 
 \begin{frame}{Where we are}
   \begin{columns}[T,onlytextwidth]
-    \column{0.52\textwidth}
+    \column{0.49\textwidth}
       \textbf{Working today}
-      \begin{itemize}
-        \item[\textcolor{ok}{\textbullet}] Full pipeline runs end to end
-        \item[\textcolor{ok}{\textbullet}] MOT16 parsing, 1-indexing and
-              ignore-classes handled
-        \item[\textcolor{ok}{\textbullet}] Siamese network trains and converges
-        \item[\textcolor{ok}{\textbullet}] Tracker survives occlusion; IDs stable
-        \item[\textcolor{ok}{\textbullet}] MOTA/MOTP/IDSW implemented
-        \item[\textcolor{ok}{\textbullet}] 36 unit tests, green in CI
+      \begin{itemize}\small
+        \item Full pipeline runs end to end
+        \item MOT16 parsing, with 1-indexing and ignored classes handled
+        \item Siamese network trains and converges
+        \item Tracker holds IDs through occlusion
+        \item MOTA, MOTP and ID switches implemented
+        \item 36 unit tests, green in CI
       \end{itemize}
-    \column{0.44\textwidth}
-      \textbf{Next}
-      \begin{itemize}
+    \column{0.46\textwidth}
+      \textbf{Still to do}
+      \begin{itemize}\small
         \item Fine-tune the detector on MOT16
-        \item Train Re-ID on Market-1501 + MOT16 crops
-        \item Sweep $\lambda$, IoU and age thresholds
-        \item Ablation: with vs.\ without Re-ID
+        \item Train re-identification on Market-1501 and MOT16 crops
+        \item Sweep $\lambda$, the IoU gate and \texttt{max\_age}
+        \item Ablation with and without re-identification
         \item Final video on a test sequence
       \end{itemize}
   \end{columns}
-  \vspace{0.6em}
+  \vspace{0.8em}
   \hrule
-  \vspace{0.5em}
-  {\footnotesize Baseline uses the COCO-pretrained detector, so the system
-  produced tracked video \emph{before} any training --- fine-tuning is an
-  improvement, not a prerequisite.}
+  \vspace{0.6em}
+  {\footnotesize The baseline runs on the COCO-pretrained detector, so the
+  system produced tracked video before we trained anything. Fine-tuning
+  improves the result rather than enabling it.}
 \end{frame}
 
 \begin{frame}[standout]
@@ -439,16 +459,16 @@
     \toprule
     \textbf{Phase} & \textbf{Work} & \textbf{Owner} \\
     \midrule
-    Done          & Pipeline, parsing, Re-ID, metrics, CI & All \\
-    Midterm week  & Baseline run, demo recorded           & Sanjana \\
-    Next          & Detector fine-tuning                  & Ben \\
-    Next          & Re-ID training on real data           & Tina \\
-    Next          & Augmentation tuning                   & Geethika \\
-    Then          & Threshold sweep, ablations            & Sanjana, Ben \\
-    Final         & Report, final video, presentation     & All \\
+    Done         & Pipeline, parsing, re-ID, metrics, CI   & All \\
+    Midterm week & Baseline run, demo recorded             & Sanjana \\
+    Next         & Detector fine-tuning                    & Ben \\
+    Next         & Re-ID training on real data             & Tina \\
+    Next         & Augmentation tuning                     & Geethika \\
+    Then         & Threshold sweep and ablations           & Sanjana, Ben \\
+    Final        & Report, final video, presentation       & All \\
     \bottomrule
   \end{tabular}
-  \vspace{1.2em}
+  \vspace{1.4em}
 
   {\footnotesize Code: \texttt{github.com/ben-blake/cs5567-project}}
 \end{frame}
