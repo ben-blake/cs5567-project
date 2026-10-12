@@ -88,7 +88,7 @@ def fetch_market1501() -> Path | None:
         return target
 
     try:
-        import gdown
+        import gdown  # type: ignore[import-not-found]  # optional extra
     except ImportError:
         print("  gdown not installed; run: pip install gdown")
         gdown = None

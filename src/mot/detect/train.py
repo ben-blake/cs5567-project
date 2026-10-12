@@ -51,7 +51,9 @@ def train_detector(
             targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
             loss_dict = model(images, targets)
-            loss = sum(loss_dict.values())
+            # stack rather than builtins.sum: sum() starts from int 0, which
+            # loses the Tensor type and upsets both checkers and readers.
+            loss = torch.stack(list(loss_dict.values())).sum()
 
             if not torch.isfinite(loss):
                 # Usually a degenerate box slipped through; skip rather than

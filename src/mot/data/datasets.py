@@ -151,6 +151,9 @@ class ReIDPairDataset(Dataset):
         return torch.from_numpy(array).permute(2, 0, 1).float() / 255.0
 
     def __getitem__(self, index: int):
+        # `index` is unused on purpose: pairs are drawn at random rather than
+        # enumerated, so __len__ sets how many pairs make an epoch, not which.
+        del index
         same = self._rng.random() < self.positive_ratio
 
         if same:
@@ -256,7 +259,8 @@ def export_mot16_crops(
             if clipped.width < 8 or clipped.height < 16:
                 continue
 
-            crop = image.crop(tuple(int(v) for v in clipped.as_xyxy()))
+            left, top, right, bottom = clipped.as_xyxy()
+            crop = image.crop((int(left), int(top), int(right), int(bottom)))
             out = output_dir / f"{track_id:04d}_{annotation.frame:06d}.jpg"
             crop.save(out, quality=92)
             exported.setdefault(track_id, []).append(out)

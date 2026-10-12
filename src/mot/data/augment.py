@@ -39,7 +39,7 @@ class DetectionTransform:
     def __call__(self, image: Image.Image, target: dict) -> tuple[torch.Tensor, dict]:
         if self.train:
             if random.random() < self.flip_probability:
-                image = image.transpose(Image.FLIP_LEFT_RIGHT)
+                image = image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
                 boxes = target["boxes"].clone()
                 if len(boxes):
                     width = image.width
