@@ -1,0 +1,31 @@
+name: Slides
+
+on:
+  push:
+    branches: [main]
+    paths: ["slides/**", ".github/workflows/slides.yml"]
+  pull_request:
+    paths: ["slides/**", ".github/workflows/slides.yml"]
+
+jobs:
+  build:
+    name: Build midterm deck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile LaTeX
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: midterm.tex
+          working_directory: slides
+          latexmk_use_xelatex: true
+          # metropolis needs fonts; the full scheme avoids chasing packages.
+          extra_system_packages: "inkscape"
+
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: midterm-slides
+          path: slides/midterm.pdf
+          if-no-files-found: error

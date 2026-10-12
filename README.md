@@ -45,7 +45,15 @@ Development targets **Google Colab** (4–6 GB VRAM is sufficient for fine-tunin
 Datasets used:
 
 - [MOT16](https://motchallenge.net/data/MOT16/) — training and test sequences
-- [Market-1501](https://paperswithcode.com/dataset/market-1501) — Re-ID similarity training
+- [Market-1501](https://zheng-lab-anu.github.io/Project/project_reid.html) — Re-ID similarity training
+- MOT16-derived crops — cut from MOT16 ground truth by `scripts/download_data.py --mot16-crops`,
+  giving in-domain Re-ID training data with no download
+
+```bash
+python scripts/download_data.py --mot16          # ~1.9 GB
+python scripts/download_data.py --market1501     # ~146 MB, via Google Drive
+python scripts/download_data.py --mot16-crops    # no download
+```
 
 ## Deliverables
 
@@ -67,9 +75,11 @@ See [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) for the full requir
 
 **Group 4**
 
-| Name              | Contact             |
-| ----------------- | ------------------- |
-| Ben Blake         | bebpph@umsystem.edu |
-| Geethika Padamati | gphxp@umsystem.edu  |
-| Tina Nguyen       | qpnh58@umsystem.edu |
-| Sanjana Aileni    | sa85m@umsystem.edu  |
+| Name              | Role                       | Owns                                      | Contact             |
+| ----------------- | -------------------------- | ----------------------------------------- | ------------------- |
+| Ben Blake         | Detection & tracking       | `detect/`, `track/`, `pipeline.py`, CI    | bebpph@umsystem.edu |
+| Geethika Padamati | Data pipeline              | `data/` — parsing, datasets, augmentation | gphxp@umsystem.edu  |
+| Tina Nguyen       | Re-identification          | `reid/` — Siamese network, training       | qpnh58@umsystem.edu |
+| Sanjana Aileni    | Evaluation & visualization | `eval/`, `viz/`, demo video               | sa85m@umsystem.edu  |
+
+See [docs/ROLES.md](docs/ROLES.md) for responsibilities, presentation split, and timeline.
