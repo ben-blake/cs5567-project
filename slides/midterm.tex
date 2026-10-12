@@ -150,19 +150,18 @@
   \begin{columns}[T,onlytextwidth]
     \column{0.54\textwidth}
       \textbf{Why this model}
-      \begin{itemize}
+      \begin{itemize}\small
         \item The Region Proposal Network generates proposals inside the
-              network, so we do not need Selective Search
+              network, so no Selective Search
         \item Proposals and detection share one backbone, so each image is
               convolved once
-        \item Good accuracy on small objects, which matters because distant
-              pedestrians are small
+        \item Good accuracy on small objects, and distant pedestrians are small
       \end{itemize}
-      \vspace{0.6em}
+      \vspace{0.5em}
       \textbf{Few-shot fine-tuning}
 
-      We freeze the ResNet50-FPN backbone and train only the detection heads,
-      following the approach in the assignment.
+      {\small We freeze the ResNet50-FPN backbone and train only the detection
+      heads, as the assignment suggests.}
     \column{0.42\textwidth}
       \begin{block}{Parameter budget}
         \begin{tabular}{lr}
@@ -208,14 +207,14 @@
         \]
         \vspace{-0.5em}
 
-        {\footnotesize Minimised with the Hungarian algorithm, which gives a
-        globally optimal one-to-one assignment. Pairs that fail either the IoU
-        or the appearance gate are rejected before matching.}
+        {\footnotesize Minimised with the Hungarian algorithm, giving a globally
+        optimal one-to-one assignment. Pairs failing the IoU or appearance gate
+        are rejected first.}
       \end{block}
+      \vspace{0.3em}
+      {\footnotesize A track survives \texttt{max\_age} unmatched frames, so a
+      brief occlusion does not create a new identity.}
   \end{columns}
-  \vspace{0.7em}
-  {\footnotesize A track survives \texttt{max\_age} unmatched frames, so a brief
-  occlusion does not create a new identity.}
 \end{frame}
 
 % ─────────────────────────────────────────── Geethika: data
@@ -348,9 +347,9 @@
 
   \begin{columns}[T,onlytextwidth]
     \column{0.44\textwidth}
-      {\footnotesize Four convolution blocks, then adaptive pooling, then a
+      {\footnotesize Four convolution blocks, adaptive pooling, then a
       128-dimensional L2-normalised embedding. 1.5\,M parameters, so it trains
-      in a few minutes.}
+      in minutes.}
     \column{0.50\textwidth}
       \begin{block}{Contrastive loss}
         \vspace{-0.7em}
@@ -359,36 +358,36 @@
         \]
         \vspace{-0.7em}
 
-        {\footnotesize Matching pairs are pulled together. Non-matching pairs
-        are pushed apart until they exceed the margin $m$.}
+        {\footnotesize Matching pairs are pulled together, non-matching pairs
+        pushed past the margin $m$.}
       \end{block}
   \end{columns}
 \end{frame}
 
 \begin{frame}{A problem we had to resolve}
   \begin{alertblock}{The course slides give four different crop sizes}
-    Training is specified at $16\times16$, inference at $24\times24$, and
-    retrieved crops at $30\times16$. The reference \texttt{Siamese\_Network}
-    code uses \texttt{nn.Linear(128*22*22, ...)}, which requires an input of
-    roughly $102\times102$. No single size satisfies all four.
+    {\small Training is specified at $16\times16$, inference at $24\times24$,
+    retrieved crops at $30\times16$, and the reference \texttt{Siamese\_Network}
+    code uses \texttt{nn.Linear(128*22*22, ...)}, needing roughly
+    $102\times102$. No single size satisfies all four.}
   \end{alertblock}
   \vspace{0.7em}
 
   \begin{columns}[T,onlytextwidth]
     \column{0.47\textwidth}
       \textbf{What we chose}
-      \begin{itemize}
-        \item $128\times64$, which is the resolution Market-1501 normalises
-              its own images to
-        \item \texttt{AdaptiveAvgPool2d} in place of a hardcoded flatten
+      \begin{itemize}\small
+        \item $128\times64$, the resolution Market-1501 normalises its own
+              images to
+        \item \texttt{AdaptiveAvgPool2d} instead of a hardcoded flatten
       \end{itemize}
     \column{0.47\textwidth}
       \textbf{Why}
-      \begin{itemize}
-        \item At $16\times16$ there is not enough resolution to tell clothing
-              apart, which is the signal re-identification relies on
-        \item Adaptive pooling accepts any input size, so the choice is no
-              longer baked into the architecture
+      \begin{itemize}\small
+        \item $16\times16$ cannot resolve clothing, which is the signal
+              re-identification relies on
+        \item Adaptive pooling accepts any input size, so the choice is not
+              baked into the architecture
       \end{itemize}
   \end{columns}
 \end{frame}
