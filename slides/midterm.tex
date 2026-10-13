@@ -33,6 +33,22 @@
   flow/.style={-{Stealth[length=2mm]}, thick, draw=gray!70},
 }
 
+% Figure slots. The notebook writes these into outputs/; copy them into
+% slides/figures/. Missing files fall back to a labelled box so the deck still
+% builds in CI and it is obvious which figures are outstanding.
+\newcommand{\slidefigure}[2][\linewidth]{%
+  \IfFileExists{figures/#2}{%
+    \includegraphics[width=#1]{figures/#2}%
+  }{%
+    \begin{tikzpicture}
+      \node[draw=gray!50, dashed, fill=gray!8, minimum width=0.85\linewidth,
+            minimum height=2.4cm, align=center, font=\scriptsize\ttfamily,
+            text=gray!60]
+        {figures/#2 \\[0.2em] run notebooks/midterm\_demo.ipynb};
+    \end{tikzpicture}%
+  }%
+}
+
 \begin{document}
 
 \maketitle
@@ -85,31 +101,11 @@
   \end{columns}
   \vspace{1.2em}
 
-  \begin{alertblock}{Target}
-    Track at least one pedestrian across an MOT16 test sequence without losing
-    it (course rubric, grade A).
+  \begin{alertblock}{Why identity, and not just location}
+    Autonomous driving, surveillance, sports analytics and robotics all need to
+    know \emph{which} person, and for how long. Our target: track at least one
+    pedestrian across an MOT16 sequence without losing them (rubric, grade A).
   \end{alertblock}
-\end{frame}
-
-\begin{frame}{Why tracking matters}
-  \begin{columns}[T,onlytextwidth]
-    \column{0.52\textwidth}
-      \begin{itemize}
-        \item \textbf{Autonomous driving.} A pedestrian whose ID changes is a
-              pedestrian whose path you cannot predict.
-        \item \textbf{Surveillance and safety.} Counting, flow analysis,
-              anomaly detection.
-        \item \textbf{Sports analytics.} Per-player statistics need per-player
-              identity.
-        \item \textbf{Retail and robotics.} Movement patterns, navigation.
-      \end{itemize}
-    \column{0.44\textwidth}
-      \begin{block}{What they share}
-        All of these need identity, not just location. Knowing that somebody is
-        standing at a position is rarely useful on its own. You need to know
-        which person, and for how long.
-      \end{block}
-  \end{columns}
 \end{frame}
 
 \begin{frame}{System architecture}
@@ -177,6 +173,16 @@
         Colab's memory budget.}
       \end{block}
   \end{columns}
+\end{frame}
+
+\begin{frame}{What the detector actually sees}
+  \centering
+  \slidefigure[0.68\linewidth]{fig1_detection.png}
+
+  \vspace{0.3em}
+  {\footnotesize Frame 1 of MOT16-02: ground truth above, our detections below.
+  The detector finds the foreground and misses the small, distant and partly
+  hidden people. That is where the missing 60\% of recall goes.}
 \end{frame}
 
 \begin{frame}{The association problem}
@@ -295,33 +301,13 @@
 \end{frame}
 
 % ─────────────────────────────────────────── Tina: re-identification
-\begin{frame}{Re-identification}
-  \textbf{The question:} do these two crops, taken from different frames, show
-  the same person?
-  \vspace{1.0em}
+\begin{frame}{Re-identification: a similarity model, not a classifier}
+  {\small A classifier over the people in a video needs retraining every time
+  somebody new walks in, and MOT16 is full of people walking in. Instead we
+  learn an \emph{embedding}: crops of one person land close together, crops of
+  different people land apart.}
+  \vspace{0.4em}
 
-  \begin{columns}[T,onlytextwidth]
-    \column{0.47\textwidth}
-      \begin{block}{Classification does not work}
-        Train a classifier over the people in the video.
-
-        \vspace{0.3em}
-        Every new person who walks into the scene needs the model retrained,
-        and MOT16 sequences are full of people walking in.
-      \end{block}
-    \column{0.47\textwidth}
-      \begin{block}{A similarity model does}
-        Learn an embedding where crops of one person land close together and
-        crops of different people land far apart.
-
-        \vspace{0.3em}
-        New people need no retraining, because the model learned similarity
-        rather than a fixed list of identities.
-      \end{block}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Siamese network}
   \centering
   \begin{tikzpicture}[node distance=0.65cm]
     \node[io]                              (a)    {Crop A};
@@ -360,6 +346,20 @@
         pushed past the margin $m$.}
       \end{block}
   \end{columns}
+\end{frame}
+
+\begin{frame}{Training the similarity model}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.5\textwidth}
+      \slidefigure{fig2_reid_training.png}
+    \column{0.48\textwidth}
+      \slidefigure{fig3_reid_similarity.png}
+  \end{columns}
+  \vspace{0.4em}
+  {\footnotesize Eight epochs on crops cut from MOT16 ground truth. Pair
+  accuracy rises from 0.535, which is chance, to 0.932 on held-out pairs. The
+  matrices show the same crops before and after: the blocks on the diagonal are
+  the network learning who is who.}
 \end{frame}
 
 \begin{frame}{A problem we had to resolve}
@@ -456,6 +456,16 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Coverage across every person}
+  \centering
+  \slidefigure[0.88\linewidth]{fig4_coverage.png}
+
+  \vspace{0.2em}
+  {\footnotesize Best single-ID coverage for each of the 44 people visible for
+  100 frames or more. One person is tracked almost perfectly; the median is
+  22.4\%. Closing that gap is a detection problem, not a tracking one.}
+\end{frame}
+
 \begin{frame}{Does re-identification help? Not yet, and we know why}
   \begin{columns}[T,onlytextwidth]
     \column{0.44\textwidth}
@@ -539,8 +549,13 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}[standout]
-  Demo
+\begin{frame}{Demo}
+  \centering
+  \slidefigure[0.84\linewidth]{fig5_target_strip.png}
+
+  \vspace{0.3em}
+  {\footnotesize \texttt{demo\_target\_clip.mp4}, 8 seconds. Target in colour,
+  every other track in grey.}
 \end{frame}
 
 \begin{frame}{Timeline to the final}
