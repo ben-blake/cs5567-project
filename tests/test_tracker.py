@@ -103,3 +103,101 @@ class TestTracking:
         tracker.update(np.array([[0, 0, 50, 100]], dtype=np.float32))
         tracker.reset()
         assert tracker.tracks == [] and tracker.frame_count == 0
+
+
+class TestReacquisitionAfterOcclusion:
+    """Regression tests for ID fragmentation.
+
+    The first version gated every match on IoU alone and never predicted
+    motion, so a person missed for a few frames while walking could not be
+    re-matched: their track's box stayed frozen where they used to be. That
+    forbade exactly the re-acquisition re-identification exists to perform,
+    and produced 175 track ids for 54 real people on MOT16-02.
+    """
+
+    @staticmethod
+    def walking(frame: int, speed: float = 6.0) -> np.ndarray:
+        x = 100.0 + speed * frame
+        return np.array([[x, 200.0, x + 60.0, 360.0]], dtype=np.float32)
+
+    def _establish(self, tracker, embedding, frames=3):
+        for frame in range(frames):
+            tracker.update(self.walking(frame), np.stack([embedding]))
+        return tracker.tracks[0].track_id
+
+    @pytest.mark.parametrize("gap", [2, 5, 10, 20])
+    def test_matching_appearance_survives_a_gap_it_moved_during(self, gap):
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5)
+        red = unit([1, 0, 0])
+        established = self._establish(tracker, red)
+
+        for _ in range(gap):
+            tracker.update(np.zeros((0, 4), dtype=np.float32), None)
+
+        out = tracker.update(self.walking(3 + gap), np.stack([red]))
+        assert [t.track_id for t in out] == [established], (
+            f"a {gap}-frame gap must not cost the identity when appearance matches"
+        )
+
+    def test_a_different_person_does_not_inherit_the_id(self):
+        """The rescue must not become a free pass for anyone who shows up."""
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5)
+        established = self._establish(tracker, unit([1, 0, 0]))
+
+        for _ in range(10):
+            tracker.update(np.zeros((0, 4), dtype=np.float32), None)
+
+        # Same place the red person would be, but a different appearance.
+        out = tracker.update(self.walking(13), np.stack([unit([0, 1, 0])]))
+        assert established not in [t.track_id for t in out]
+
+    def test_without_appearance_there_is_no_rescue(self):
+        """Overlap-only tracking keeps its original, stricter behaviour."""
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.0)
+        for frame in range(3):
+            tracker.update(self.walking(frame))
+        established = tracker.tracks[0].track_id
+
+        for _ in range(20):
+            tracker.update(np.zeros((0, 4), dtype=np.float32))
+
+        out = tracker.update(self.walking(23))
+        assert established not in [t.track_id for t in out]
+
+
+class TestMotionPrediction:
+    def test_velocity_is_learned_from_observations(self):
+        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        for frame in range(4):
+            x = 100.0 + 10.0 * frame
+            tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
+
+        track = tracker.tracks[0]
+        assert track.velocity[0] == pytest.approx(10.0, abs=1.5)
+
+    def test_predicted_box_moves_while_unmatched(self):
+        tracker = Tracker(min_hits=1, max_age=30, appearance_weight=0.0)
+        for frame in range(4):
+            x = 100.0 + 10.0 * frame
+            tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
+
+        track = tracker.tracks[0]
+        resting = track.box.copy()
+        for _ in range(3):
+            tracker.update(np.zeros((0, 4), dtype=np.float32))
+
+        assert track.predicted_box()[0] > resting[0], "prediction must advance"
+
+    def test_extrapolation_is_capped(self):
+        """A constant-velocity guess stops being useful far from the last look."""
+        tracker = Tracker(min_hits=1, max_age=100, appearance_weight=0.0)
+        for frame in range(4):
+            x = 100.0 + 10.0 * frame
+            tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
+
+        track = tracker.tracks[0]
+        for _ in range(60):
+            tracker.update(np.zeros((0, 4), dtype=np.float32))
+
+        drift = track.predicted_box()[0] - track.box[0]
+        assert drift <= 15 * 10.0 + 1, "extrapolation must be bounded"
