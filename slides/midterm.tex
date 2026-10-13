@@ -270,20 +270,20 @@
 \begin{frame}{Data augmentation}
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
-      MOT16 gives us a small number of scenes, so the model can memorise those
-      scenes instead of learning what a pedestrian looks like.
-      \vspace{0.8em}
+      {\small MOT16 gives us few scenes, so the model can memorise those scenes
+      instead of learning what a pedestrian looks like.}
+      \vspace{0.6em}
 
       \textbf{Detection}
-      \begin{itemize}
-        \item Horizontal flip, with boxes mirrored to match
-        \item Colour jitter on brightness, contrast and saturation
+      \begin{itemize}\small
+        \item Horizontal flip, boxes mirrored to match
+        \item Colour jitter: brightness, contrast, saturation
       \end{itemize}
-      \vspace{0.5em}
+      \vspace{0.4em}
       \textbf{Re-ID crops}
-      \begin{itemize}
+      \begin{itemize}\small
         \item Random crop and horizontal flip
-        \item Random erasing, which simulates occlusion
+        \item Random erasing, simulating occlusion
       \end{itemize}
     \column{0.45\textwidth}
       \begin{block}{What we leave out}
@@ -431,10 +431,10 @@
         {\footnotesize Measured against the ground-truth person, not against
         whichever track lived longest.}
       \end{alertblock}
-      \vspace{0.3em}
-      {\footnotesize Re-ID pair accuracy 0.535 $\rightarrow$ 0.932 \\
-      Throughput 4.0 FPS (600 frames in 149\,s) \\
-      Median coverage across 44 people: 22.4\%}
+      \vspace{0.2em}
+      {\footnotesize Re-ID pair accuracy 0.535 $\rightarrow$ 0.932. Throughput
+      4.0 FPS. \alert{Median coverage across 44 people: 22.4\%}, which is the
+      recall problem, not an association problem.}
     \column{0.48\textwidth}
       \begin{block}{Whole sequence}
         {\footnotesize
@@ -449,11 +449,12 @@
           ID switches     & 151 \\
           \bottomrule
         \end{tabular}}
+        \vspace{0.3em}
+
+        {\footnotesize MOTP 0.792 means the boxes are tight. MOTA is held down
+        almost entirely by false negatives.}
       \end{block}
   \end{columns}
-  \vspace{0.5em}
-  {\footnotesize MOTP 0.792 means matched boxes are tight. MOTA is held down
-  almost entirely by false negatives.}
 \end{frame}
 
 \begin{frame}{Does re-identification help? Not yet, and we know why}
