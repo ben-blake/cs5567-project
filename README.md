@@ -68,6 +68,7 @@ See [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) for the full requir
 
 | Document                                                 | Contents                                                                 |
 | -------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [docs/RESULTS.md](docs/RESULTS.md)                       | Measured baseline results on MOT16-02, with the Re-ID ablation            |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md)                       | How to run the notebook, make the demo video, build the slides            |
 | [docs/ROLES.md](docs/ROLES.md)                           | Who owns what, presentation split, timeline                              |
 | [docs/MEETING.md](docs/MEETING.md)                       | Agenda for the midterm planning meeting                                  |
