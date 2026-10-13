@@ -41,10 +41,13 @@
     \includegraphics[width=#1]{figures/#2}%
   }{%
     \begin{tikzpicture}
+      % \detokenize: the filenames contain underscores, which LaTeX would
+      % otherwise read as subscripts and refuse to typeset in text mode.
       \node[draw=gray!50, dashed, fill=gray!8, minimum width=0.85\linewidth,
             minimum height=2.4cm, align=center, font=\scriptsize\ttfamily,
             text=gray!60]
-        {figures/#2 \\[0.2em] run notebooks/midterm\_demo.ipynb};
+        {\detokenize{figures/#2} \\[0.2em]
+         \detokenize{run notebooks/midterm_demo.ipynb}};
     \end{tikzpicture}%
   }%
 }
