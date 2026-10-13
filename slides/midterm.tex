@@ -424,17 +424,16 @@
   \begin{columns}[T,onlytextwidth]
     \column{0.46\textwidth}
       \begin{alertblock}{Against the rubric}
-        One real pedestrian is held by a single id for \textbf{218 of the 230
-        frames they appear in (94.8\%)}, before any fine-tuning.
+        {\small One real pedestrian is held by a single id for \textbf{218 of
+        the 230 frames they appear in (94.8\%)}, before any fine-tuning.
         \vspace{0.3em}
 
-        {\footnotesize Measured against the ground-truth person, not against
-        whichever track lived longest.}
+        But the \textbf{median across 44 people is 22.4\%}. One person is
+        tracked well; most are not.}
       \end{alertblock}
-      \vspace{0.2em}
-      {\footnotesize Re-ID pair accuracy 0.535 $\rightarrow$ 0.932. Throughput
-      4.0 FPS. \alert{Median coverage across 44 people: 22.4\%}, which is the
-      recall problem, not an association problem.}
+      \vspace{0.3em}
+      {\footnotesize Measured against the ground-truth person, not whichever
+      track lived longest. Re-ID accuracy 0.535 $\rightarrow$ 0.932, 4.0 FPS.}
     \column{0.48\textwidth}
       \begin{block}{Whole sequence}
         {\footnotesize
