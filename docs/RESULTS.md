@@ -10,14 +10,34 @@ Reproduce with `notebooks/midterm_demo.ipynb`.
 
 | Measure | Value |
 | --- | --- |
-| Target pedestrian tracked | **583 / 600 frames (97.2%)** |
-| Throughput | 3.86 FPS (600 frames in 155 s) |
+| Best single-ID coverage of one real person | **218 / 230 frames (94.8%)** |
+| Throughput | 4.0 FPS (600 frames in 149 s) |
 | Re-ID pair accuracy | 0.535 before training, **0.932** after |
 | Detector parameters trained | 14.5 M of 41.3 M (35.1%) |
 
 The rubric asks that one target pedestrian be tracked across a sequence without
-being lost. At 97.2% on the longest track, the baseline already meets that
-before any detector fine-tuning.
+being lost. Ground-truth person 35 is held by a single predicted id for 94.8%
+of the frames they appear in, before any detector fine-tuning.
+
+### A correction to an earlier number
+
+An earlier version of this document reported 97.2%, taken from the
+longest-lived predicted track as a fraction of the clip. That measure is not
+stable. When tracks fragment, which fragment happens to be longest shifts
+between runs, and the headline moves with it: re-running the identical
+configuration produced 73.0% with no change to MOTA, MOTP, ID switches or
+unique id count. It was also answering the wrong question, since a long-lived
+track is not necessarily a correctly tracked person.
+
+`mot.eval.metrics.target_coverage` measures it against the ground truth
+instead, which is both the question the rubric asks and a number that holds
+still. Everything else in this document reproduced exactly across runs.
+
+### The same number, honestly scoped
+
+Among the 44 people visible for 100 or more frames, the **median** single-id
+coverage is 22.4%. One person is tracked well; most are not. That gap is the
+recall problem, not an association problem.
 
 ## Full sequence metrics
 
@@ -41,7 +61,8 @@ Same detector and thresholds, appearance weight set to zero.
 | --- | --- | --- |
 | MOTA | 0.232 | 0.232 |
 | MOTP | 0.792 | 0.792 |
-| ID switches | 149 | 148 |
+| ID switches | 151 | 148 |
+| Unique ids | 176 | 176 |
 
 **Re-identification currently changes nothing.** This is worth presenting
 honestly rather than hiding, and it has a clear explanation.

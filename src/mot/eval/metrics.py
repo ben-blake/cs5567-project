@@ -153,3 +153,67 @@ def score_tracking(
         id_switches=totals["idsw"],
         matched_iou_sum=iou_sum,
     )
+
+
+@dataclass
+class TargetCoverage:
+    """How well one real person is held by a single predicted id."""
+
+    gt_id: int
+    gt_frames: int
+    best_pred_id: int | None
+    covered_frames: int
+
+    @property
+    def coverage(self) -> float:
+        return self.covered_frames / self.gt_frames if self.gt_frames else 0.0
+
+
+def target_coverage(
+    gt_per_frame: dict[int, tuple[np.ndarray, list[int]]],
+    pred_per_frame: dict[int, tuple[np.ndarray, list[int]]],
+    iou_threshold: float = 0.5,
+) -> list[TargetCoverage]:
+    """For each ground-truth person, the best single predicted id covering them.
+
+    The assignment asks us to "track at least one single target pedestrian"
+    without losing them. That is a claim about a real person, so measure it
+    against a real person.
+
+    The tempting shortcut -- take the longest-lived predicted track and report
+    what fraction of the clip it spans -- is not the same question and is not
+    stable: when tracks fragment, which fragment happens to be longest shifts
+    between runs, and the number moves with it even though the tracking has
+    not changed. This measure is anchored to the ground truth, so it does not.
+
+    Returns one entry per ground-truth identity, best coverage first.
+    """
+    best: dict[int, dict[int, int]] = {}
+    totals: dict[int, int] = {}
+
+    for frame in sorted(set(gt_per_frame) | set(pred_per_frame)):
+        gt_boxes, gt_ids = gt_per_frame.get(frame, (np.zeros((0, 4)), []))
+        for gt_id in gt_ids:
+            totals[gt_id] = totals.get(gt_id, 0) + 1
+
+        if frame not in pred_per_frame:
+            continue
+        pred_boxes, pred_ids = pred_per_frame[frame]
+        gt_boxes = np.asarray(gt_boxes, dtype=np.float32).reshape(-1, 4)
+        pred_boxes = np.asarray(pred_boxes, dtype=np.float32).reshape(-1, 4)
+
+        for gt_idx, pred_idx, _ in match_frame(gt_boxes, pred_boxes, iou_threshold):
+            per_gt = best.setdefault(gt_ids[gt_idx], {})
+            pred_id = pred_ids[pred_idx]
+            per_gt[pred_id] = per_gt.get(pred_id, 0) + 1
+
+    rows = []
+    for gt_id, gt_frames in totals.items():
+        candidates = best.get(gt_id, {})
+        if candidates:
+            pred_id, covered = max(candidates.items(), key=lambda kv: kv[1])
+        else:
+            pred_id, covered = None, 0
+        rows.append(TargetCoverage(gt_id, gt_frames, pred_id, covered))
+
+    return sorted(rows, key=lambda r: -r.coverage)
