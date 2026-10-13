@@ -75,6 +75,61 @@ honestly rather than hiding, and it has a clear explanation.
    MOTA prefers precision. That is a property of the metric, not a free win:
    a threshold of 0.80 throws away a fifth of the recall we already have.
 
+## Investigating the ID fragmentation
+
+The first run produced 175 track ids for 54 real people, which looked like a
+bug. It partly was. A synthetic test showed that with an **identical**
+appearance embedding, a person missed for five frames already lost their
+identity:
+
+| gap (frames) | IoU with the stale track box | outcome |
+| --- | --- | --- |
+| 2 | 0.538 | id kept |
+| 5 | 0.250 | **new id** |
+| 10 | 0.000 | **new id** |
+
+Two causes. A track's box stayed frozen at its last observation while the
+person kept walking, and the IoU gate was applied even when an appearance
+embedding was available, so a perfect appearance match was rejected before it
+was consulted. Together they forbade exactly the re-acquisition that
+re-identification exists to perform.
+
+### Fixing it made the tracking worse
+
+Both defects are real, and repairing them does reduce fragmentation. It also
+makes every metric that matters worse.
+
+| Configuration | IDs | MOTA | IDSW | FN | target % |
+| --- | --- | --- | --- | --- | --- |
+| **Original (shipped default)** | 175 | **0.232** | **149** | 10,829 | **97.2** |
+| Motion prediction only | 206 | 0.233 | 153 | 10,856 | 72.8 |
+| Motion + strict rescue | 78 | 0.212 | 432 | 10,735 | 91.0 |
+| Motion + rescue | 54 | 0.212 | 421 | 10,715 | 86.2 |
+
+The bounded rescue produces exactly 54 ids for 54 people, which looks like a
+perfect result and is not one: ID switches almost triple, because the same
+small set of ids is passed around between people. **Unique id count is a bad
+proxy for tracking quality.**
+
+### Why the repair backfires
+
+At recall near 0.40 the tracker is working from sparse, noisy detections. A
+fragmented track costs one broken identity. A wrong re-acquisition merges two
+people and corrupts both. With a re-identification network at 0.932 pair
+accuracy rather than 1.0, and 600 frames of a crowded scene, the rescue makes
+more mistakes than it prevents.
+
+The conservative original also protects the headline result: the longest track
+stays clean at 97.2% precisely because the tracker refuses risky matches.
+
+### What we did about it
+
+Both features are implemented, tested, and **off by default**
+(`motion_prediction=False`, `reid_rescue_distance=0.0`), so the shipped
+configuration reproduces the best measured result. They are worth revisiting
+after the detector is fine-tuned: re-acquisition needs good candidates to
+choose between, and at 0.40 recall it does not have them.
+
 ## Next
 
 - Fine-tune the detector on MOT16 and re-measure. Recall is the number to watch.

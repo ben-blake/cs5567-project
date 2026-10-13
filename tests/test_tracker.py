@@ -33,7 +33,7 @@ class TestIoU:
 
 class TestTracking:
     def test_ids_persist_under_smooth_motion(self):
-        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, appearance_weight=0.0, motion_prediction=True)
         seen = []
         for frame in range(6):
             dets = np.array([[frame * 4, 0, 60 + frame * 4, 120]], dtype=np.float32)
@@ -41,7 +41,7 @@ class TestTracking:
         assert seen == [[1]] * 6, "a smoothly moving person must keep one id"
 
     def test_separate_people_get_separate_ids(self):
-        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, appearance_weight=0.0, motion_prediction=True)
         dets = np.array([[0, 0, 50, 100], [300, 0, 350, 100]], dtype=np.float32)
         assert len(tracker.update(dets)) == 2
 
@@ -127,7 +127,8 @@ class TestReacquisitionAfterOcclusion:
 
     @pytest.mark.parametrize("gap", [2, 5, 10, 20])
     def test_matching_appearance_survives_a_gap_it_moved_during(self, gap):
-        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5)
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
         red = unit([1, 0, 0])
         established = self._establish(tracker, red)
 
@@ -141,7 +142,8 @@ class TestReacquisitionAfterOcclusion:
 
     def test_a_different_person_does_not_inherit_the_id(self):
         """The rescue must not become a free pass for anyone who shows up."""
-        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5)
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
         established = self._establish(tracker, unit([1, 0, 0]))
 
         for _ in range(10):
@@ -167,7 +169,7 @@ class TestReacquisitionAfterOcclusion:
 
 class TestMotionPrediction:
     def test_velocity_is_learned_from_observations(self):
-        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, appearance_weight=0.0, motion_prediction=True)
         for frame in range(4):
             x = 100.0 + 10.0 * frame
             tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
@@ -176,7 +178,7 @@ class TestMotionPrediction:
         assert track.velocity[0] == pytest.approx(10.0, abs=1.5)
 
     def test_predicted_box_moves_while_unmatched(self):
-        tracker = Tracker(min_hits=1, max_age=30, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, max_age=30, appearance_weight=0.0, motion_prediction=True)
         for frame in range(4):
             x = 100.0 + 10.0 * frame
             tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
@@ -190,7 +192,7 @@ class TestMotionPrediction:
 
     def test_extrapolation_is_capped(self):
         """A constant-velocity guess stops being useful far from the last look."""
-        tracker = Tracker(min_hits=1, max_age=100, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, max_age=100, appearance_weight=0.0, motion_prediction=True)
         for frame in range(4):
             x = 100.0 + 10.0 * frame
             tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
@@ -201,3 +203,57 @@ class TestMotionPrediction:
 
         drift = track.predicted_box()[0] - track.box[0]
         assert drift <= 15 * 10.0 + 1, "extrapolation must be bounded"
+
+
+class TestRescueIsBounded:
+    """The appearance rescue must stay spatially plausible.
+
+    Allowing appearance alone to justify any match let a track jump across the
+    frame onto a stranger, collapsing 54 real people into 31 ids on MOT16-02.
+    """
+
+    def test_distant_match_is_refused_even_with_identical_appearance(self):
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5, rescue_radius=2.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
+        red = unit([1, 0, 0])
+
+        near = np.array([[100.0, 200.0, 160.0, 360.0]], dtype=np.float32)
+        tracker.update(near, np.stack([red]))
+        established = tracker.tracks[0].track_id
+        tracker.update(np.zeros((0, 4), dtype=np.float32), None)
+
+        # Same person, implausibly far away: roughly 10 box diagonals.
+        far = np.array([[1700.0, 200.0, 1760.0, 360.0]], dtype=np.float32)
+        out = tracker.update(far, np.stack([red]))
+        assert established not in [t.track_id for t in out], (
+            "a rescue must not reach across the frame"
+        )
+
+    def test_nearby_match_is_still_rescued(self):
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5, rescue_radius=2.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
+        red = unit([1, 0, 0])
+
+        tracker.update(np.array([[100.0, 200.0, 160.0, 360.0]], dtype=np.float32),
+                       np.stack([red]))
+        established = tracker.tracks[0].track_id
+        tracker.update(np.zeros((0, 4), dtype=np.float32), None)
+
+        # One box-width to the right: plausible for a walking person.
+        out = tracker.update(np.array([[190.0, 200.0, 250.0, 360.0]], dtype=np.float32),
+                             np.stack([red]))
+        assert [t.track_id for t in out] == [established]
+
+
+def test_centre_distance_is_scale_invariant():
+    """The same displacement in box-widths scores the same at any scale."""
+    from mot.track.tracker import centre_distance_matrix
+
+    small = np.array([[0, 0, 10, 20]], dtype=np.float32)
+    small_moved = np.array([[10, 0, 20, 20]], dtype=np.float32)
+    big = np.array([[0, 0, 100, 200]], dtype=np.float32)
+    big_moved = np.array([[100, 0, 200, 200]], dtype=np.float32)
+
+    assert centre_distance_matrix(small, small_moved)[0, 0] == pytest.approx(
+        centre_distance_matrix(big, big_moved)[0, 0], rel=1e-5
+    )

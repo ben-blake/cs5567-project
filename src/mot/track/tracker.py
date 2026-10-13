@@ -44,6 +44,27 @@ def iou_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarray:
     return np.where(union > 0, intersection / np.maximum(union, 1e-9), 0.0).astype(np.float32)
 
 
+def centre_distance_matrix(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarray:
+    """Centre-to-centre distance, in units of the first box's diagonal.
+
+    Normalising by size makes one threshold work for a pedestrian close to the
+    camera and one far away, where the same pixel distance means very
+    different things.
+    """
+    if len(boxes_a) == 0 or len(boxes_b) == 0:
+        return np.zeros((len(boxes_a), len(boxes_b)), dtype=np.float32)
+
+    a = np.asarray(boxes_a, dtype=np.float32)
+    b = np.asarray(boxes_b, dtype=np.float32)
+
+    centre_a = np.stack([(a[:, 0] + a[:, 2]) / 2, (a[:, 1] + a[:, 3]) / 2], axis=1)
+    centre_b = np.stack([(b[:, 0] + b[:, 2]) / 2, (b[:, 1] + b[:, 3]) / 2], axis=1)
+    pixels = np.linalg.norm(centre_a[:, None, :] - centre_b[None, :, :], axis=2)
+
+    diagonal = np.hypot(a[:, 2] - a[:, 0], a[:, 3] - a[:, 1])
+    return (pixels / np.maximum(diagonal, 1e-6)[:, None]).astype(np.float32)
+
+
 def _assign(cost: np.ndarray) -> list[tuple[int, int]]:
     """Minimum-cost assignment, Hungarian when SciPy is present."""
     if cost.size == 0:
@@ -141,8 +162,21 @@ class Tracker:
         max_appearance_distance: cosine distance above which a pair is
             rejected outright, whatever the overlap says.
         reid_rescue_distance: cosine distance below which appearance alone can
-            justify a match that overlap would have rejected. This is what
-            lets a track survive an occlusion it moved during.
+            justify a match that overlap would have rejected, letting a track
+            survive an occlusion it moved during. **Defaults to 0, disabled.**
+        rescue_radius: how far an appearance rescue may reach, in box
+            diagonals. People do not teleport, so a rescue still has to be
+            spatially plausible however well the embeddings agree.
+        motion_prediction: match against where a track should be rather than
+            where it was last seen. **Defaults to False.**
+
+    Both re-acquisition features are off by default, and that is a measured
+    decision rather than caution. On MOT16-02 with detection recall near 0.40
+    they each made the result worse: see docs/RESULTS.md. A track that
+    fragments costs one broken identity, while a wrong re-acquisition merges
+    two people and costs more. Revisit once the detector is fine-tuned and
+    recall is high enough that re-acquisition has good candidates to choose
+    between.
     """
 
     def __init__(
@@ -152,7 +186,9 @@ class Tracker:
         iou_threshold: float = 0.3,
         appearance_weight: float = 0.5,
         max_appearance_distance: float = 0.6,
-        reid_rescue_distance: float = 0.25,
+        reid_rescue_distance: float = 0.0,
+        rescue_radius: float = 2.5,
+        motion_prediction: bool = False,
     ):
         self.max_age = max_age
         self.min_hits = min_hits
@@ -160,6 +196,8 @@ class Tracker:
         self.appearance_weight = appearance_weight
         self.max_appearance_distance = max_appearance_distance
         self.reid_rescue_distance = reid_rescue_distance
+        self.rescue_radius = rescue_radius
+        self.motion_prediction = motion_prediction
 
         self.tracks: list[Track] = []
         self._next_id = 1
@@ -169,7 +207,10 @@ class Tracker:
         """Blended motion + appearance cost; infeasible pairs get a huge cost."""
         # Compare against where each track should be now, not where it was last
         # seen. A missed frame should not cost the track its identity.
-        track_boxes = np.array([t.predicted_box() for t in self.tracks], dtype=np.float32)
+        track_boxes = np.array(
+            [t.predicted_box() if self.motion_prediction else t.box for t in self.tracks],
+            dtype=np.float32,
+        )
         overlap = iou_matrix(track_boxes, detections)
         motion_cost = 1.0 - overlap
 
@@ -193,7 +234,17 @@ class Tracker:
             # pair. The rescue threshold is deliberately stricter than the
             # blend threshold: re-acquiring across the frame on weak evidence
             # trades one error for a worse one.
-            forbidden = poor_overlap & (appearance > self.reid_rescue_distance)
+            # A rescue needs both a confident appearance match and a
+            # plausible distance. Appearance alone let a track jump across the
+            # frame onto a stranger, which collapsed 54 people into 31 ids.
+            displacement = centre_distance_matrix(track_boxes, detections)
+            rescuable = (
+                (appearance <= self.reid_rescue_distance)
+                & (displacement <= self.rescue_radius)
+                if self.reid_rescue_distance > 0
+                else np.zeros_like(poor_overlap)
+            )
+            forbidden = poor_overlap & ~rescuable
             # A pair whose appearance is outright wrong is never allowed,
             # however well the boxes happen to line up.
             forbidden |= appearance > self.max_appearance_distance
