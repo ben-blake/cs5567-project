@@ -33,7 +33,7 @@ class TestIoU:
 
 class TestTracking:
     def test_ids_persist_under_smooth_motion(self):
-        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, appearance_weight=0.0, motion_prediction=True)
         seen = []
         for frame in range(6):
             dets = np.array([[frame * 4, 0, 60 + frame * 4, 120]], dtype=np.float32)
@@ -41,7 +41,7 @@ class TestTracking:
         assert seen == [[1]] * 6, "a smoothly moving person must keep one id"
 
     def test_separate_people_get_separate_ids(self):
-        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, appearance_weight=0.0, motion_prediction=True)
         dets = np.array([[0, 0, 50, 100], [300, 0, 350, 100]], dtype=np.float32)
         assert len(tracker.update(dets)) == 2
 
@@ -127,7 +127,8 @@ class TestReacquisitionAfterOcclusion:
 
     @pytest.mark.parametrize("gap", [2, 5, 10, 20])
     def test_matching_appearance_survives_a_gap_it_moved_during(self, gap):
-        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5)
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
         red = unit([1, 0, 0])
         established = self._establish(tracker, red)
 
@@ -141,7 +142,8 @@ class TestReacquisitionAfterOcclusion:
 
     def test_a_different_person_does_not_inherit_the_id(self):
         """The rescue must not become a free pass for anyone who shows up."""
-        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5)
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
         established = self._establish(tracker, unit([1, 0, 0]))
 
         for _ in range(10):
@@ -167,7 +169,7 @@ class TestReacquisitionAfterOcclusion:
 
 class TestMotionPrediction:
     def test_velocity_is_learned_from_observations(self):
-        tracker = Tracker(min_hits=1, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, appearance_weight=0.0, motion_prediction=True)
         for frame in range(4):
             x = 100.0 + 10.0 * frame
             tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
@@ -176,7 +178,7 @@ class TestMotionPrediction:
         assert track.velocity[0] == pytest.approx(10.0, abs=1.5)
 
     def test_predicted_box_moves_while_unmatched(self):
-        tracker = Tracker(min_hits=1, max_age=30, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, max_age=30, appearance_weight=0.0, motion_prediction=True)
         for frame in range(4):
             x = 100.0 + 10.0 * frame
             tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
@@ -190,7 +192,7 @@ class TestMotionPrediction:
 
     def test_extrapolation_is_capped(self):
         """A constant-velocity guess stops being useful far from the last look."""
-        tracker = Tracker(min_hits=1, max_age=100, appearance_weight=0.0)
+        tracker = Tracker(min_hits=1, max_age=100, appearance_weight=0.0, motion_prediction=True)
         for frame in range(4):
             x = 100.0 + 10.0 * frame
             tracker.update(np.array([[x, 0, x + 50, 100]], dtype=np.float32))
@@ -211,7 +213,8 @@ class TestRescueIsBounded:
     """
 
     def test_distant_match_is_refused_even_with_identical_appearance(self):
-        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5, rescue_radius=2.5)
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5, rescue_radius=2.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
         red = unit([1, 0, 0])
 
         near = np.array([[100.0, 200.0, 160.0, 360.0]], dtype=np.float32)
@@ -227,7 +230,8 @@ class TestRescueIsBounded:
         )
 
     def test_nearby_match_is_still_rescued(self):
-        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5, rescue_radius=2.5)
+        tracker = Tracker(max_age=30, min_hits=1, appearance_weight=0.5, rescue_radius=2.5,
+                          reid_rescue_distance=0.20, motion_prediction=True)
         red = unit([1, 0, 0])
 
         tracker.update(np.array([[100.0, 200.0, 160.0, 360.0]], dtype=np.float32),
