@@ -34,9 +34,27 @@ MOT16 ground truth  ->  parse + augment
 ## Repository structure
 
 ```
-docs/
-  reference/    project brief, requirements, and lecture reference material
+src/mot/        the package
+  data/         MOT16 parsing, datasets, augmentation
+  detect/       Faster R-CNN, fine-tuning
+  reid/         Siamese network, contrastive loss
+  track/        Hungarian association, track lifecycle
+  eval/         MOTA, MOTP, ID switches, target coverage
+  viz/          overlays and video encoding
+  pipeline.py   end to end: frames in, tracked video out
+notebooks/      Colab demo, runs the whole pipeline
+scripts/        dataset download, command-line tracking
+slides/         Beamer deck, built by CI
+docs/           guides and measured results
+tests/          56 tests
 ```
+
+## Current results
+
+On MOT16-02, 600 frames, with the COCO-pretrained detector and **no
+fine-tuning**: one real pedestrian is held by a single ID for **94.8%** of their
+frames, MOTA 0.232, MOTP 0.792. Detection recall near 0.40 is the bottleneck.
+Full numbers and analysis in [docs/RESULTS.md](docs/RESULTS.md).
 
 ## Getting started
 
@@ -66,14 +84,13 @@ See [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) for the full requir
 
 ## Documentation
 
-| Document                                                 | Contents                                                                 |
-| -------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [docs/RESULTS.md](docs/RESULTS.md)                       | Measured baseline results on MOT16-02, with the Re-ID ablation            |
-| [docs/RUNBOOK.md](docs/RUNBOOK.md)                       | How to run the notebook, make the demo video, build the slides            |
-| [docs/ROLES.md](docs/ROLES.md)                           | Who owns what, presentation split, timeline                              |
-| [docs/MEETING.md](docs/MEETING.md)                       | Agenda for the midterm planning meeting                                  |
-| [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) | Project brief, assignment requirements, implementation guidance, rubric  |
-| [docs/reference/RCNN.md](docs/reference/RCNN.md)         | Reference deck: R-CNN → Fast R-CNN → Faster R-CNN → Mask R-CNN, and YOLO |
+| Document                                                 | Contents                                                                  |
+| -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [docs/MIDTERM_GUIDE.md](docs/MIDTERM_GUIDE.md)           | Roles, speaking split, numbers to defend, demo, rehearsal                 |
+| [docs/FINAL_GUIDE.md](docs/FINAL_GUIDE.md)               | Work remaining in priority order, plus how to run everything              |
+| [docs/RESULTS.md](docs/RESULTS.md)                       | Measured results, the Re-ID ablation, and why the tracker fix backfired   |
+| [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) | Project brief, assignment requirements, implementation guidance, rubric   |
+| [docs/reference/RCNN.md](docs/reference/RCNN.md)         | Reference deck: R-CNN → Fast R-CNN → Faster R-CNN → Mask R-CNN, and YOLO  |
 
 ## Team
 
@@ -86,4 +103,4 @@ See [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) for the full requir
 | Tina Nguyen       | Re-identification          | `reid/` — Siamese network, training       | qpnh58@umsystem.edu |
 | Sanjana Aileni    | Evaluation & visualization | `eval/`, `viz/`, demo video               | sa85m@umsystem.edu  |
 
-See [docs/ROLES.md](docs/ROLES.md) for responsibilities, presentation split, and timeline.
+See [docs/MIDTERM_GUIDE.md](docs/MIDTERM_GUIDE.md) for responsibilities and the presentation split.

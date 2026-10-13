@@ -69,3 +69,62 @@ class TestTrackingScore:
             )
         }
         assert score_tracking(gt, pred).mota < 0
+
+
+class TestTargetCoverage:
+    """Coverage of a real person by one predicted id."""
+
+    def test_perfect_single_track(self):
+        from mot.eval.metrics import target_coverage
+
+        frames = {f: (np.array([BOX_A], dtype=np.float32), [1]) for f in range(1, 11)}
+        pred = {f: (np.array([BOX_A], dtype=np.float32), [99]) for f in range(1, 11)}
+
+        rows = target_coverage(frames, pred)
+        assert len(rows) == 1
+        assert rows[0].gt_id == 1
+        assert rows[0].best_pred_id == 99
+        assert rows[0].coverage == pytest.approx(1.0)
+
+    def test_fragmented_track_scores_the_largest_fragment(self):
+        from mot.eval.metrics import target_coverage
+
+        gt = {f: (np.array([BOX_A], dtype=np.float32), [1]) for f in range(1, 11)}
+        # One person, split across two predicted ids: 7 frames then 3.
+        pred = {
+            f: (np.array([BOX_A], dtype=np.float32), [7 if f <= 7 else 8])
+            for f in range(1, 11)
+        }
+        assert target_coverage(gt, pred)[0].coverage == pytest.approx(0.7)
+
+    def test_is_stable_when_an_unrelated_track_is_longer(self):
+        """The headline must not move because some other track outlives it.
+
+        This is the failure the longest-track shortcut has: a decoy that lives
+        longer than the target changes the reported number without the target
+        being tracked any better.
+        """
+        from mot.eval.metrics import target_coverage
+
+        gt = {f: (np.array([BOX_A], dtype=np.float32), [1]) for f in range(1, 11)}
+        pred = {f: (np.array([BOX_A], dtype=np.float32), [7]) for f in range(1, 11)}
+        baseline = target_coverage(gt, pred)[0].coverage
+
+        # Add a long-lived decoy nowhere near the ground-truth person.
+        decoy = np.array([900, 900, 950, 1000], dtype=np.float32)
+        gt_d = dict(gt)
+        pred_d = {
+            f: (np.array([BOX_A, decoy], dtype=np.float32), [7, 1234])
+            for f in range(1, 31)
+        }
+        for f in range(11, 31):
+            gt_d[f] = (np.zeros((0, 4), dtype=np.float32), [])
+
+        assert target_coverage(gt_d, pred_d)[0].coverage == pytest.approx(baseline)
+
+    def test_undetected_person_scores_zero(self):
+        from mot.eval.metrics import target_coverage
+
+        gt = {f: (np.array([BOX_A], dtype=np.float32), [1]) for f in range(1, 6)}
+        rows = target_coverage(gt, {})
+        assert rows[0].coverage == 0.0 and rows[0].best_pred_id is None

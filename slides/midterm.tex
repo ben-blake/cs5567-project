@@ -424,16 +424,17 @@
   \begin{columns}[T,onlytextwidth]
     \column{0.46\textwidth}
       \begin{alertblock}{Against the rubric}
-        The target pedestrian is tracked in \textbf{583 of 600 frames
-        (97.2\%)}.
+        One real pedestrian is held by a single id for \textbf{218 of the 230
+        frames they appear in (94.8\%)}, before any fine-tuning.
         \vspace{0.3em}
 
-        {\footnotesize That is the grade-A criterion, met before any detector
-        fine-tuning.}
+        {\footnotesize Measured against the ground-truth person, not against
+        whichever track lived longest.}
       \end{alertblock}
       \vspace{0.3em}
       {\footnotesize Re-ID pair accuracy 0.535 $\rightarrow$ 0.932 \\
-      Throughput 3.86 FPS (600 frames in 155\,s)}
+      Throughput 4.0 FPS (600 frames in 149\,s) \\
+      Median coverage across 44 people: 22.4\%}
     \column{0.48\textwidth}
       \begin{block}{Whole sequence}
         {\footnotesize
@@ -443,9 +444,9 @@
           MOTP            & 0.792 \\
           \midrule
           True positives  & 7{,}004 \\
-          False positives & 2{,}714 \\
+          False positives & 2{,}713 \\
           False negatives & 10{,}829 \\
-          ID switches     & 149 \\
+          ID switches     & 151 \\
           \bottomrule
         \end{tabular}}
       \end{block}
@@ -466,7 +467,7 @@
           \midrule
           MOTA  & 0.232 & 0.232 \\
           MOTP  & 0.792 & 0.792 \\
-          IDSW  & 149   & 148 \\
+          IDSW  & 151   & 148 \\
           \bottomrule
         \end{tabular}}
         \vspace{0.3em}
@@ -500,32 +501,48 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{Where we are}
+\begin{frame}{A bug we found, fixed, and then turned off}
+  \textbf{Symptom.} 176 track IDs for 54 real people.
+  \vspace{0.4em}
+
+  \textbf{There really was a bug.} With an \emph{identical} appearance
+  embedding, a person missed for five frames lost their identity. The track's
+  box stayed where the person used to be, and the tracker refused to look at
+  appearance until the boxes overlapped again.
+  \vspace{0.7em}
+
   \begin{columns}[T,onlytextwidth]
-    \column{0.49\textwidth}
-      \textbf{Working today}
-      \begin{itemize}\small
-        \item Full pipeline runs end to end on real data
-        \item MOT16 parsing, with 1-indexing and ignored classes handled
-        \item Siamese network trains and converges
-        \item MOTA, MOTP and ID switches implemented
-        \item 40 unit tests, green in CI
-      \end{itemize}
+    \column{0.5\textwidth}
+      {\footnotesize
+      \begin{tabular}{lrrr}
+        \toprule
+        Configuration & IDs & MOTA & IDSW \\
+        \midrule
+        \textbf{What we ship} & 176 & \textbf{0.232} & \textbf{151} \\
+        + motion prediction   & 206 & 0.233 & 153 \\
+        + re-acquisition      & 54  & 0.212 & 421 \\
+        \bottomrule
+      \end{tabular}}
+      \vspace{0.4em}
+
+      {\footnotesize 54 IDs for 54 people looks perfect. It is not: switches
+      almost tripled, because the same IDs get passed between people.}
     \column{0.46\textwidth}
-      \textbf{Known weakness}
-      \begin{itemize}\small
-        \item 175 track IDs for 54 real people: the tracker fragments
-              identities when the detector drops a person for longer than
-              \texttt{max\_age}
-        \item Recall near 0.40 is the root cause, and the next thing we fix
-      \end{itemize}
+      \begin{alertblock}{Two ways to be wrong}
+        {\footnotesize
+        \textbf{Splitting:} one person, several IDs. You lose the thread and
+        pick up a new one. Costs one interruption.
+        \vspace{0.4em}
+
+        \textbf{Merging:} one ID, several people. You keep following
+        confidently, onto the wrong person. Costs two trajectories.}
+      \end{alertblock}
   \end{columns}
-  \vspace{0.8em}
-  \hrule
-  \vspace{0.6em}
-  {\footnotesize The baseline runs on the COCO-pretrained detector, so the
-  system produced tracked video before we trained anything. Fine-tuning
-  improves the result rather than enabling it.}
+  \vspace{0.5em}
+  {\footnotesize The fix made the tracker eager to reconnect. But the detector
+  finds only 40\% of people, so most ``reappearances'' are strangers, and our
+  re-ID network is 93\% accurate, not perfect. Eager reconnection merges more
+  than it recovers. Both features ship disabled, to revisit after fine-tuning.}
 \end{frame}
 
 \begin{frame}[standout]
