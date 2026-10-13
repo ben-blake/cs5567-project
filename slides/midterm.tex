@@ -187,17 +187,15 @@
   \begin{columns}[T,onlytextwidth]
     \column{0.45\textwidth}
       \textbf{Overlap alone fails}
-      \vspace{0.2em}
 
-      When two people cross, each box overlaps the other's previous position,
-      so position cannot separate them.
-      \vspace{0.8em}
+      {\small When two people cross, each box overlaps the other's previous
+      position, so position cannot separate them.}
+      \vspace{0.6em}
 
       \textbf{Appearance alone fails}
-      \vspace{0.2em}
 
-      Two people in similar clothing produce similar embeddings, and appearance
-      drifts as someone turns.
+      {\small Two people in similar clothing produce similar embeddings, and
+      appearance drifts as someone turns.}
     \column{0.50\textwidth}
       \begin{block}{Blended cost}
         \vspace{-0.4em}
@@ -208,13 +206,13 @@
         \vspace{-0.5em}
 
         {\footnotesize Minimised with the Hungarian algorithm, giving a globally
-        optimal one-to-one assignment. Pairs failing the IoU or appearance gate
-        are rejected first.}
+        optimal one-to-one assignment.}
       \end{block}
-      \vspace{0.3em}
-      {\footnotesize A track survives \texttt{max\_age} unmatched frames, so a
-      brief occlusion does not create a new identity.}
   \end{columns}
+  \vspace{0.6em}
+  {\footnotesize Pairs failing the IoU or appearance gate are rejected before
+  matching. A track survives \texttt{max\_age} unmatched frames, so a brief
+  occlusion does not create a new identity.}
 \end{frame}
 
 % ─────────────────────────────────────────── Geethika: data
