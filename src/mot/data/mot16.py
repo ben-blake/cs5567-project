@@ -199,10 +199,6 @@ class Sequence:
         """Absolute path to a 1-indexed frame."""
         return self.root / self.info.im_dir / f"{frame:06d}{self.info.im_ext}"
 
-    def frame_paths(self) -> list[Path]:
-        image_dir = self.root / self.info.im_dir
-        return sorted(image_dir.glob(f"*{self.info.im_ext}"))
-
     def ground_truth(self, targets_only: bool = True) -> list[Annotation]:
         """Ground-truth boxes, pedestrians only by default."""
         if not self.has_ground_truth:
@@ -211,10 +207,6 @@ class Sequence:
         if targets_only:
             annotations = [a for a in annotations if a.is_target]
         return annotations
-
-    def public_detections(self) -> list[Annotation]:
-        """The benchmark's own detections, for comparison against ours."""
-        return parse_annotations(self.root / "det" / "det.txt")
 
     def __repr__(self) -> str:
         return f"<Sequence {self.name} frames={self.info.seq_length}>"

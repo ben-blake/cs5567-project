@@ -502,14 +502,11 @@
 \end{frame}
 
 \begin{frame}{A bug we found, fixed, and then turned off}
-  \textbf{Symptom.} 176 track IDs for 54 real people.
-  \vspace{0.4em}
-
-  \textbf{There really was a bug.} With an \emph{identical} appearance
-  embedding, a person missed for five frames lost their identity. The track's
-  box stayed where the person used to be, and the tracker refused to look at
-  appearance until the boxes overlapped again.
-  \vspace{0.7em}
+  \textbf{Symptom.} 176 track IDs for 54 real people. \quad
+  \textbf{And there was a real bug:} with an \emph{identical} appearance
+  embedding, a five-frame gap lost the identity. The track's box stayed where
+  the person used to be, and appearance was never consulted.
+  \vspace{0.6em}
 
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
@@ -530,19 +527,18 @@
     \column{0.46\textwidth}
       \begin{alertblock}{Two ways to be wrong}
         {\footnotesize
-        \textbf{Splitting:} one person, several IDs. You lose the thread and
-        pick up a new one. Costs one interruption.
-        \vspace{0.4em}
+        \textbf{Splitting:} one person, several IDs. Costs one interruption.
+        \vspace{0.3em}
 
         \textbf{Merging:} one ID, several people. You keep following
         confidently, onto the wrong person. Costs two trajectories.}
       \end{alertblock}
   \end{columns}
-  \vspace{0.5em}
-  {\footnotesize The fix made the tracker eager to reconnect. But the detector
-  finds only 40\% of people, so most ``reappearances'' are strangers, and our
-  re-ID network is 93\% accurate, not perfect. Eager reconnection merges more
-  than it recovers. Both features ship disabled, to revisit after fine-tuning.}
+  \vspace{0.4em}
+  {\footnotesize The fix made the tracker eager to reconnect. But only 40\% of
+  people are detected, so most ``reappearances'' are strangers, and our re-ID
+  network is 93\% accurate, not perfect. Eager reconnection merges more than it
+  recovers, so both features ship disabled, to revisit after fine-tuning.}
 \end{frame}
 
 \begin{frame}[standout]
