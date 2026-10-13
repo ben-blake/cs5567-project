@@ -444,7 +444,7 @@
           MOTP            & 0.792 \\
           \midrule
           True positives  & 7{,}004 \\
-          False positives & 2{,}714 \\
+          False positives & 2{,}713 \\
           False negatives & 10{,}829 \\
           ID switches     & 151 \\
           \bottomrule
@@ -502,36 +502,47 @@
 \end{frame}
 
 \begin{frame}{A bug we found, fixed, and then turned off}
-  176 ids for 54 real people looked like a bug. It was one: with an
-  \emph{identical} appearance embedding, a five-frame gap already cost the
-  identity, because the track's box froze while the person kept walking and
-  the overlap gate rejected the match before appearance was consulted.
-  \vspace{0.6em}
+  \textbf{Symptom.} 176 track IDs for 54 real people.
+  \vspace{0.4em}
+
+  \textbf{There really was a bug.} With an \emph{identical} appearance
+  embedding, a person missed for five frames lost their identity. The track's
+  box stayed where the person used to be, and the tracker refused to look at
+  appearance until the boxes overlapped again.
+  \vspace{0.7em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.52\textwidth}
+    \column{0.5\textwidth}
       {\footnotesize
       \begin{tabular}{lrrr}
         \toprule
         Configuration & IDs & MOTA & IDSW \\
         \midrule
-        \textbf{Shipped default} & 176 & \textbf{0.232} & \textbf{151} \\
-        Motion prediction        & 206 & 0.233 & 153 \\
-        + strict re-acquisition  & 78  & 0.212 & 432 \\
-        + re-acquisition         & 54  & 0.212 & 421 \\
+        \textbf{What we ship} & 176 & \textbf{0.232} & \textbf{151} \\
+        + motion prediction   & 206 & 0.233 & 153 \\
+        + re-acquisition      & 54  & 0.212 & 421 \\
         \bottomrule
       \end{tabular}}
-    \column{0.44\textwidth}
-      \begin{alertblock}{Fixing it made tracking worse}
-        {\footnotesize 54 ids for 54 people looks perfect and is not: switches
-        nearly triple, because the same ids get passed between people.}
+      \vspace{0.4em}
+
+      {\footnotesize 54 IDs for 54 people looks perfect. It is not: switches
+      almost tripled, because the same IDs get passed between people.}
+    \column{0.46\textwidth}
+      \begin{alertblock}{Two ways to be wrong}
+        {\footnotesize
+        \textbf{Splitting:} one person, several IDs. You lose the thread and
+        pick up a new one. Costs one interruption.
+        \vspace{0.4em}
+
+        \textbf{Merging:} one ID, several people. You keep following
+        confidently, onto the wrong person. Costs two trajectories.}
       \end{alertblock}
   \end{columns}
   \vspace{0.5em}
-  {\footnotesize At 0.40 recall a fragmented track costs one broken identity,
-  while a wrong re-acquisition merges two people and corrupts both. Both
-  features ship disabled, and are worth revisiting once fine-tuning gives
-  re-acquisition better candidates to choose between.}
+  {\footnotesize The fix made the tracker eager to reconnect. But the detector
+  finds only 40\% of people, so most ``reappearances'' are strangers, and our
+  re-ID network is 93\% accurate, not perfect. Eager reconnection merges more
+  than it recovers. Both features ship disabled, to revisit after fine-tuning.}
 \end{frame}
 
 \begin{frame}[standout]

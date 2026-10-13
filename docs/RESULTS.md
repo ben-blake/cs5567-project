@@ -1,71 +1,59 @@
-# Baseline results
+# Results
 
-First end-to-end run on real data, measured in Colab on a T4.
-Sequence MOT16-02, 600 frames, COCO-pretrained detector with **no fine-tuning**,
-Siamese re-identification trained for 8 epochs on MOT16-derived crops.
+Measured in Colab on a T4. Sequence MOT16-02, 600 frames, COCO-pretrained
+detector with **no fine-tuning**, Siamese re-identification trained for 8 epochs
+on crops cut from MOT16 ground truth.
 
 Reproduce with `notebooks/midterm_demo.ipynb`.
+
+---
 
 ## Headline
 
 | Measure | Value |
 | --- | --- |
-| Best single-ID coverage of one real person | **218 / 230 frames (94.8%)** |
-| Throughput | 4.0 FPS (600 frames in 149 s) |
+| Best coverage of one real person by a single ID | **218 / 230 frames (94.8%)** |
+| Median coverage across 44 people visible 100+ frames | 22.4% |
+| MOTA / MOTP | 0.232 / 0.792 |
 | Re-ID pair accuracy | 0.535 before training, **0.932** after |
+| Throughput | 4.0 FPS (600 frames in 149 s) |
 | Detector parameters trained | 14.5 M of 41.3 M (35.1%) |
 
 The rubric asks that one target pedestrian be tracked across a sequence without
-being lost. Ground-truth person 35 is held by a single predicted id for 94.8%
-of the frames they appear in, before any detector fine-tuning.
+being lost. Ground-truth person 35 is held by a single predicted ID for 94.8% of
+the frames they appear in, before any detector fine-tuning. The median tells the
+other half of the story: most people are not tracked well, and that is a
+detection problem rather than a tracking one.
 
-### A correction to an earlier number
-
-An earlier version of this document reported 97.2%, taken from the
-longest-lived predicted track as a fraction of the clip. That measure is not
-stable. When tracks fragment, which fragment happens to be longest shifts
-between runs, and the headline moves with it: re-running the identical
-configuration produced 73.0% with no change to MOTA, MOTP, ID switches or
-unique id count. It was also answering the wrong question, since a long-lived
-track is not necessarily a correctly tracked person.
-
-`mot.eval.metrics.target_coverage` measures it against the ground truth
-instead, which is both the question the rubric asks and a number that holds
-still. Everything else in this document reproduced exactly across runs.
-
-### The same number, honestly scoped
-
-Among the 44 people visible for 100 or more frames, the **median** single-id
-coverage is 22.4%. One person is tracked well; most are not. That gap is the
-recall problem, not an association problem.
-
-## Full sequence metrics
+## Full sequence
 
 | Metric | Value |
 | --- | --- |
 | MOTA | 0.232 |
 | MOTP | 0.792 |
 | True positives | 7,004 |
-| False positives | 2,714 |
+| False positives | 2,713 |
 | False negatives | 10,829 |
-| ID switches | 149 |
+| ID switches | 151 |
+| Unique predicted IDs | 176 |
 
-MOTP of 0.792 means matched boxes are tight. MOTA is held down almost entirely
-by false negatives: the detector finds roughly 40% of the annotated people.
+MOTP 0.792 means the boxes we do produce are tight. MOTA is dragged down almost
+entirely by false negatives: the detector finds roughly 40% of the annotated
+people.
 
 ## Ablation: does re-identification help?
 
-Same detector and thresholds, appearance weight set to zero.
+Identical detector and thresholds, appearance weight set to zero.
 
 | Metric | With Re-ID | Overlap only |
 | --- | --- | --- |
 | MOTA | 0.232 | 0.232 |
 | MOTP | 0.792 | 0.792 |
 | ID switches | 151 | 148 |
-| Unique ids | 176 | 176 |
+| Unique IDs | 176 | 176 |
 
-**Re-identification currently changes nothing.** This is worth presenting
-honestly rather than hiding, and it has a clear explanation.
+**Re-identification currently changes nothing.** The explanation is below, and
+it is worth presenting rather than hiding.
 
 ## Detection threshold sweep (150 frames)
 
@@ -76,85 +64,130 @@ honestly rather than hiding, and it has a clear explanation.
 | 0.70 | 0.190 | 0.455 | 871 | 1,860 | 34 |
 | 0.80 | **0.268** | 0.400 | 435 | 2,049 | 15 |
 
-## What this tells us
+Recall barely moves: from 0.40 to 0.51 across the whole range, while false
+positives quadruple. The people we miss are not low-confidence detections being
+filtered out. They are people the COCO model does not find at all, which are the
+small, distant and heavily occluded ones that a crowded street is full of.
 
-1. **Detection recall is the bottleneck, not association.** False negatives
-   (10,829) outnumber ID switches (149) by seventy to one. Lowering the
-   threshold raises recall only from 0.40 to 0.51 while false positives
-   quadruple, so recall is capped by people the COCO model does not find at
-   all: small, distant and heavily occluded pedestrians in a crowded scene.
-   This is the empirical case for fine-tuning on MOT16, and it is exactly what
-   the assignment asks for.
+---
 
-2. **Re-ID has nothing to disambiguate yet.** At 30 fps a pedestrian moves a
-   few pixels per frame, so the IoU gate usually leaves at most one feasible
-   match and appearance never breaks a tie. Re-ID should start paying off once
-   recall improves and once we test it where overlap is ambiguous: longer gaps,
-   crossing paths, and re-entry after occlusion.
+## Why the ID fragmentation is not the problem it looks like
 
-3. **Raising the threshold trades recall for precision**, and on this sequence
-   MOTA prefers precision. That is a property of the metric, not a free win:
-   a threshold of 0.80 throws away a fifth of the recall we already have.
+This is the part worth understanding properly, because the result is
+counterintuitive.
 
-## Investigating the ID fragmentation
+### The symptom
 
-The first run produced 175 track ids for 54 real people, which looked like a
-bug. It partly was. A synthetic test showed that with an **identical**
-appearance embedding, a person missed for five frames already lost their
-identity:
+The tracker produced **176 IDs for 54 real people**. On the face of it the
+tracker is inventing people.
 
-| gap (frames) | IoU with the stale track box | outcome |
+### There really was a bug
+
+A test with a synthetic walking person, where the appearance embedding was held
+**identical** throughout, showed the identity being lost after a short gap:
+
+| Frames missed | IoU with the track's last known box | Result |
 | --- | --- | --- |
-| 2 | 0.538 | id kept |
-| 5 | 0.250 | **new id** |
-| 10 | 0.000 | **new id** |
+| 2 | 0.538 | ID kept |
+| 5 | 0.250 | **new ID** |
+| 10 | 0.000 | **new ID** |
 
-Two causes. A track's box stayed frozen at its last observation while the
-person kept walking, and the IoU gate was applied even when an appearance
-embedding was available, so a perfect appearance match was rejected before it
-was consulted. Together they forbade exactly the re-acquisition that
-re-identification exists to perform.
+Two causes, both real:
+
+1. **The track's box did not move.** When a detection was missed, the track kept
+   the box from the last frame it was seen in, while the person kept walking. A
+   second later the box was nowhere near them.
+2. **Appearance was never consulted.** The tracker required boxes to overlap
+   before it would even look at appearance. So a perfect appearance match was
+   thrown away because the boxes had drifted apart, which is exactly the
+   situation re-identification exists to handle.
+
+So `max_age=30` was misleading. The track stayed in memory for 30 frames but
+stopped being matchable after about 4.
 
 ### Fixing it made the tracking worse
 
-Both defects are real, and repairing them does reduce fragmentation. It also
-makes every metric that matters worse.
+| Configuration | IDs | MOTA | IDSW |
+| --- | --- | --- | --- |
+| **Original (what we ship)** | 176 | **0.232** | **151** |
+| Motion prediction only | 206 | 0.233 | 153 |
+| Motion + strict re-acquisition | 78 | 0.212 | 432 |
+| Motion + re-acquisition | 54 | 0.212 | 421 |
 
-| Configuration | IDs | MOTA | IDSW | FN | target % |
-| --- | --- | --- | --- | --- | --- |
-| **Original (shipped default)** | 175 | **0.232** | **149** | 10,829 | **97.2** |
-| Motion prediction only | 206 | 0.233 | 153 | 10,856 | 72.8 |
-| Motion + strict rescue | 78 | 0.212 | 432 | 10,735 | 91.0 |
-| Motion + rescue | 54 | 0.212 | 421 | 10,715 | 86.2 |
+Read the bottom row carefully. **54 IDs for 54 real people** looks like a perfect
+result. It is not: ID switches almost tripled. The tracker is not giving each
+person their own ID. It is handing the same small set of IDs around between
+different people, like a baton.
 
-The bounded rescue produces exactly 54 ids for 54 people, which looks like a
-perfect result and is not one: ID switches almost triple, because the same
-small set of ids is passed around between people. **Unique id count is a bad
-proxy for tracking quality.**
+### Why
 
-### Why the repair backfires
+A tracker can be wrong in two different ways, and they do not cost the same.
 
-At recall near 0.40 the tracker is working from sparse, noisy detections. A
-fragmented track costs one broken identity. A wrong re-acquisition merges two
-people and corrupts both. With a re-identification network at 0.932 pair
-accuracy rather than 1.0, and 600 frames of a crowded scene, the rescue makes
-more mistakes than it prevents.
+- **Splitting.** One person gets several IDs over time. You lose the thread, and
+  you pick up a new one.
+- **Merging.** One ID gets attached to several people. You do not lose the
+  thread. You keep following it confidently, onto the wrong person, and now two
+  people's trajectories are wrong instead of one being interrupted.
 
-The conservative original also protects the headline result: the longest track
-stays clean at 97.2% precisely because the tracker refuses risky matches.
+The fix made the tracker more willing to say *"you look like someone I lost,
+welcome back."* That is the right instinct when you can trust two things: that
+most people who disappear really do come back, and that you can reliably tell
+people apart. Neither holds here.
 
-### What we did about it
+- The detector finds about 40% of people. So most of the time a person
+  "reappears", they are someone who was never tracked in the first place, not
+  someone returning.
+- The re-identification network is 93% accurate on pairs, not 100%. Across 600
+  frames of a crowded street, 7% wrong is a lot of wrong.
 
-Both features are implemented, tested, and **off by default**
+Put together, an eager tracker spends most of its re-acquisitions merging
+strangers. Splitting is ugly and cheap. Merging is tidy-looking and expensive.
+At this recall, ugly and cheap wins.
+
+### What we did
+
+Both features are implemented and tested, and both are **off by default**
 (`motion_prediction=False`, `reid_rescue_distance=0.0`), so the shipped
-configuration reproduces the best measured result. They are worth revisiting
-after the detector is fine-tuned: re-acquisition needs good candidates to
-choose between, and at 0.40 recall it does not have them.
+configuration reproduces the best measured result.
 
-## Next
+They are worth revisiting after the detector is fine-tuned. Re-acquisition needs
+good candidates to choose between, and at 0.40 recall it does not have them.
 
-- Fine-tune the detector on MOT16 and re-measure. Recall is the number to watch.
-- Re-run the ablation afterwards, and construct a harder case for Re-ID
-  (occlusion and re-entry) rather than judging it on easy frames.
-- Sweep `max_age`, `iou_threshold` and `appearance_weight` together once
-  recall improves.
+### The lesson
+
+**Unique ID count is a bad measure of tracking quality.** It was the number that
+made the original look broken, and the number that made the broken version look
+fixed. ID switches and MOTA both say the opposite.
+
+---
+
+## A number we had to withdraw
+
+An earlier version of this document reported **97.2%** as the headline, taken
+from the longest-lived predicted track as a fraction of the clip.
+
+That number is not reproducible. Re-running an identical configuration produced
+**73.0%**, while MOTA, MOTP, ID switches and unique ID count all reproduced
+exactly. When tracks fragment, which fragment happens to be longest shifts
+between runs, and the headline moves with it even though the tracking has not
+changed.
+
+It was also the wrong question. A long-lived track is not necessarily a
+correctly tracked person; it could be one ID passed between several people.
+
+`mot.eval.metrics.target_coverage` replaces it by anchoring to the ground truth:
+for each real person, which single predicted ID covers the most of their frames.
+That is the question the rubric asks, and it holds still across runs.
+
+**Do not quote 97.2% anywhere.** The stable number is 94.8%.
+
+---
+
+## What to do next
+
+1. **Fine-tune the detector.** Recall near 0.40 caps everything else.
+2. **Re-measure the ablation afterwards.** The conclusion that re-identification
+   does not help is a conclusion about this recall level, not a permanent one.
+3. **Then re-test re-acquisition**, which is already implemented and disabled.
+
+Details and ownership in [FINAL_GUIDE.md](FINAL_GUIDE.md).
