@@ -72,10 +72,19 @@ def fetch_mot16() -> Path:
         return target
 
     archive = download(MOT16_URL, PATHS.data / "MOT16.zip")
-    unzip(archive, PATHS.data)
+    # The archive holds train/ and test/ at its root, with no MOT16/ wrapper,
+    # so extract into the MOT16 directory rather than beside it.
+    unzip(archive, target)
     archive.unlink(missing_ok=True)  # reclaim ~2 GB of Colab disk
 
-    print(f"  ready: {target}")
+    if not (target / "train").is_dir():
+        raise SystemExit(
+            f"extraction finished but {target / 'train'} is missing. "
+            f"Contents: {sorted(p.name for p in target.iterdir())}"
+        )
+
+    sequences = sorted(p.name for p in (target / "train").iterdir() if p.is_dir())
+    print(f"  ready: {target} ({len(sequences)} training sequences)")
     return target
 
 
