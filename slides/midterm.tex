@@ -416,26 +416,108 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Results: first end-to-end run}
+  MOT16-02, 600 frames, on a Colab T4. COCO-pretrained detector, \textbf{no
+  fine-tuning yet}; re-identification trained for 8 epochs on MOT16 crops.
+  \vspace{0.7em}
+
+  \begin{columns}[T,onlytextwidth]
+    \column{0.46\textwidth}
+      \begin{alertblock}{Against the rubric}
+        The target pedestrian is tracked in \textbf{583 of 600 frames
+        (97.2\%)}.
+        \vspace{0.3em}
+
+        {\footnotesize That is the grade-A criterion, met before any detector
+        fine-tuning.}
+      \end{alertblock}
+      \vspace{0.3em}
+      {\footnotesize Re-ID pair accuracy 0.535 $\rightarrow$ 0.932 \\
+      Throughput 3.86 FPS (600 frames in 155\,s)}
+    \column{0.48\textwidth}
+      \begin{block}{Whole sequence}
+        {\footnotesize
+        \begin{tabular}{lr}
+          \toprule
+          MOTA            & 0.232 \\
+          MOTP            & 0.792 \\
+          \midrule
+          True positives  & 7{,}004 \\
+          False positives & 2{,}714 \\
+          False negatives & 10{,}829 \\
+          ID switches     & 149 \\
+          \bottomrule
+        \end{tabular}}
+      \end{block}
+  \end{columns}
+  \vspace{0.5em}
+  {\footnotesize MOTP 0.792 means matched boxes are tight. MOTA is held down
+  almost entirely by false negatives.}
+\end{frame}
+
+\begin{frame}{Does re-identification help? Not yet, and we know why}
+  \begin{columns}[T,onlytextwidth]
+    \column{0.44\textwidth}
+      \begin{block}{Ablation, 600 frames}
+        {\footnotesize
+        \begin{tabular}{lrr}
+          \toprule
+                & with & without \\
+          \midrule
+          MOTA  & 0.232 & 0.232 \\
+          MOTP  & 0.792 & 0.792 \\
+          IDSW  & 149   & 148 \\
+          \bottomrule
+        \end{tabular}}
+        \vspace{0.3em}
+
+        {\footnotesize Appearance changes nothing.}
+      \end{block}
+    \column{0.52\textwidth}
+      \begin{block}{Detection threshold sweep, 150 frames}
+        {\footnotesize
+        \begin{tabular}{rrrrr}
+          \toprule
+          thresh & MOTA & recall & FN & IDSW \\
+          \midrule
+          0.50 & $-$0.006 & 0.509 & 1{,}676 & 80 \\
+          0.60 & 0.105 & 0.490 & 1{,}741 & 72 \\
+          0.70 & 0.190 & 0.455 & 1{,}860 & 34 \\
+          0.80 & \textbf{0.268} & 0.400 & 2{,}049 & 15 \\
+          \bottomrule
+        \end{tabular}}
+      \end{block}
+  \end{columns}
+  \vspace{0.6em}
+
+  \begin{alertblock}{What this tells us}
+    {\footnotesize False negatives outnumber ID switches seventy to one, and
+    lowering the threshold lifts recall only 0.40 to 0.51 while false positives
+    quadruple. Recall is capped by people the COCO model never finds: small,
+    distant, occluded. \textbf{Detection is the bottleneck, so association has
+    nothing left to disambiguate.} That is the case for fine-tuning, and it is
+    what we do next.}
+  \end{alertblock}
+\end{frame}
+
 \begin{frame}{Where we are}
   \begin{columns}[T,onlytextwidth]
     \column{0.49\textwidth}
       \textbf{Working today}
       \begin{itemize}\small
-        \item Full pipeline runs end to end
+        \item Full pipeline runs end to end on real data
         \item MOT16 parsing, with 1-indexing and ignored classes handled
         \item Siamese network trains and converges
-        \item Tracker holds IDs through occlusion
         \item MOTA, MOTP and ID switches implemented
-        \item 36 unit tests, green in CI
+        \item 40 unit tests, green in CI
       \end{itemize}
     \column{0.46\textwidth}
-      \textbf{Still to do}
+      \textbf{Known weakness}
       \begin{itemize}\small
-        \item Fine-tune the detector on MOT16
-        \item Train re-identification on Market-1501 and MOT16 crops
-        \item Sweep $\lambda$, the IoU gate and \texttt{max\_age}
-        \item Ablation with and without re-identification
-        \item Final video on a test sequence
+        \item 175 track IDs for 54 real people: the tracker fragments
+              identities when the detector drops a person for longer than
+              \texttt{max\_age}
+        \item Recall near 0.40 is the root cause, and the next thing we fix
       \end{itemize}
   \end{columns}
   \vspace{0.8em}
@@ -457,8 +539,8 @@
     \textbf{Phase} & \textbf{Work} & \textbf{Owner} \\
     \midrule
     Done         & Pipeline, parsing, re-ID, metrics, CI   & All \\
-    Midterm week & Baseline run, demo recorded             & Sanjana \\
-    Next         & Detector fine-tuning                    & Ben \\
+    Done         & Baseline run, ablation, demo video       & Sanjana \\
+    Next         & Detector fine-tuning (recall is capped)  & Ben \\
     Next         & Re-ID training on real data             & Tina \\
     Next         & Augmentation tuning                     & Geethika \\
     Then         & Threshold sweep and ablations           & Sanjana, Ben \\
