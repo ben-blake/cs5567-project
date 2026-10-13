@@ -74,7 +74,7 @@ def train_reid(
             loss.backward()
             optimizer.step()
 
-            running += float(loss)
+            running += float(loss.detach())
             batches += 1
             if log_every and step % log_every == 0:
                 print(f"  epoch {epoch + 1} step {step}/{len(loader)} loss {float(loss):.4f}")
