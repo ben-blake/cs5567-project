@@ -99,14 +99,18 @@ events.out.tfevents.*
 *.log
 
 # ---------- Generated media (tracking videos, frames) ----------
-# Commit the final deliverable deliberately with `git add -f`.
+# Figures and clips under slides/figures/ are tracked on purpose. Everything
+# else generated stays out: one notebook run produces tens of megabytes of
+# video, and committing that by accident is not undoable.
 /results/
 /output/
 /frames/
+*.mp4
 *.avi
 *.mov
 *.mkv
 *.webm
+!slides/figures/*.mp4
 
 # ---------- Report build artifacts (LaTeX / Overleaf) ----------
 *.aux
