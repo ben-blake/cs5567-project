@@ -157,21 +157,3 @@ def write_video(
         f"could not encode {output_path.name}: no working codec among {attempted}. "
         "Install a fuller OpenCV build, or write .avi instead of .mp4."
     )
-
-
-def contact_sheet(
-    images: list[Image.Image], columns: int = 4, thumb_width: int = 320
-) -> Image.Image:
-    """Tile frames into one image -- useful as a static slide figure."""
-    if not images:
-        raise ValueError("no images")
-
-    scale = thumb_width / images[0].width
-    thumb_height = int(images[0].height * scale)
-    rows = (len(images) + columns - 1) // columns
-
-    sheet = Image.new("RGB", (columns * thumb_width, rows * thumb_height), (20, 20, 20))
-    for index, image in enumerate(images):
-        thumb = image.convert("RGB").resize((thumb_width, thumb_height))
-        sheet.paste(thumb, ((index % columns) * thumb_width, (index // columns) * thumb_height))
-    return sheet

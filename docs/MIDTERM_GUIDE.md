@@ -128,13 +128,41 @@ longest-lived track and moved to 73.0% on re-run with nothing else changing.
 
 ---
 
-## The demo
+## Figures and the demo
 
-Two files, both produced by `notebooks/midterm_demo.ipynb`:
+`notebooks/midterm_demo.ipynb` runs top to bottom in about 25 minutes on a T4
+and writes everything the deck needs into `outputs/`.
 
-- `MOT16-02_target_clip.mp4`, 8 seconds, highlights the tracked person in colour
-  and everyone else in grey. **This is the one to show.**
-- `MOT16-02_demo.mp4`, the full 600 frames, if there is time.
+### Getting the figures into the slides
+
+The deck has five figure slots. Until the files are present each one renders as
+a dashed placeholder naming the file it wants, so the deck always builds and
+missing figures are obvious.
+
+| File | Slide |
+| --- | --- |
+| `fig1_detection.png` | What the detector actually sees |
+| `fig2_reid_training.png` | Training the similarity model |
+| `fig3_reid_similarity.png` | Training the similarity model |
+| `fig4_coverage.png` | Coverage across every person |
+| `fig5_target_strip.png` | Demo |
+
+Download them from Colab, drop them in `slides/figures/`, then:
+
+```bash
+git add -f slides/figures/*.png    # PNGs are gitignored by default
+git commit -m "docs: add presentation figures"
+```
+
+The next CI build produces a deck with the real figures in place.
+
+### The video
+
+Two files, both produced by the same notebook run:
+
+- `demo_target_clip.mp4`, 8 seconds, target in colour and everyone else in
+  grey. **This is the one to show.**
+- `demo_full.mp4`, the full 600 frames, if there is time.
 
 **Download both to the presenting laptop beforehand.** They live in a Colab
 runtime that expires. Do not stream from Drive, and do not run Colab live in the

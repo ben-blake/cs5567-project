@@ -227,24 +227,21 @@ class Tracker:
         if appearance is None:
             forbidden = poor_overlap
         else:
-            # Overlap and appearance are alternative evidence, not joint
-            # requirements. Gating on overlap alone forbids precisely the
-            # re-acquisition after occlusion that re-identification exists to
-            # perform, so a confident appearance match rescues a low-overlap
-            # pair. The rescue threshold is deliberately stricter than the
-            # blend threshold: re-acquiring across the frame on weak evidence
-            # trades one error for a worse one.
-            # A rescue needs both a confident appearance match and a
-            # plausible distance. Appearance alone let a track jump across the
-            # frame onto a stranger, which collapsed 54 people into 31 ids.
-            displacement = centre_distance_matrix(track_boxes, detections)
-            rescuable = (
-                (appearance <= self.reid_rescue_distance)
-                & (displacement <= self.rescue_radius)
-                if self.reid_rescue_distance > 0
-                else np.zeros_like(poor_overlap)
-            )
-            forbidden = poor_overlap & ~rescuable
+            forbidden = poor_overlap.copy()
+
+            if self.reid_rescue_distance > 0:
+                # Treat overlap and appearance as alternative evidence rather
+                # than joint requirements, so a confident appearance match can
+                # recover a track whose box has gone stale. Both conditions
+                # are required for the rescue itself: appearance alone let a
+                # track jump across the frame onto a stranger. See
+                # docs/RESULTS.md for why this is off by default.
+                displacement = centre_distance_matrix(track_boxes, detections)
+                rescuable = (appearance <= self.reid_rescue_distance) & (
+                    displacement <= self.rescue_radius
+                )
+                forbidden &= ~rescuable
+
             # A pair whose appearance is outright wrong is never allowed,
             # however well the boxes happen to line up.
             forbidden |= appearance > self.max_appearance_distance
