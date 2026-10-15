@@ -87,6 +87,7 @@ See [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) for the full requir
 | Document                                                 | Contents                                                                  |
 | -------------------------------------------------------- | ------------------------------------------------------------------------- |
 | [docs/MIDTERM_GUIDE.md](docs/MIDTERM_GUIDE.md)           | Roles, speaking split, numbers to defend, demo, rehearsal                 |
+| [docs/PRESENTATION_SCRIPT.md](docs/PRESENTATION_SCRIPT.md) | Slide-by-slide script with speaker and timing for each                 |
 | [docs/FINAL_GUIDE.md](docs/FINAL_GUIDE.md)               | Work remaining in priority order, plus how to run everything              |
 | [docs/RESULTS.md](docs/RESULTS.md)                       | Measured results, the Re-ID ablation, and why the tracker fix backfired   |
 | [docs/reference/OVERVIEW.md](docs/reference/OVERVIEW.md) | Project brief, assignment requirements, implementation guidance, rubric   |
