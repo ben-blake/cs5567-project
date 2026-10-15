@@ -71,7 +71,10 @@ through the pipeline, so each person builds on the last.
 | **Sanjana** | 14 to 17 | Metrics, results, the ablation, demo |
 | **Ben** | 18 to 19 | The bug we found and turned off, timeline |
 
-**One person drives the laptop for the whole talk.** Swapping machines costs a
+**Word-for-word suggestions, with a time budget per slide, are in
+[PRESENTATION_SCRIPT.md](PRESENTATION_SCRIPT.md).
+
+One person drives the laptop for the whole talk.** Swapping machines costs a
 minute and invites an adapter problem.
 
 ---
