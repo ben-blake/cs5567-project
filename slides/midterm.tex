@@ -57,7 +57,7 @@
 \maketitle
 
 % ─────────────────────────────────────────── Ben: problem and system
-\begin{frame}{The team and the split}
+\begin{frame}{Team}
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
       \textbf{Ben Blake}, detection and tracking \\
@@ -75,13 +75,9 @@
       {\small Metrics, visualization, result video}
   \end{columns}
   \vspace{1.4em}
-  \hrule
-  \vspace{0.9em}
-  Each of us owns one module end to end: its code, its slides, and its section
-  of the report.
 \end{frame}
 
-\begin{frame}{The problem}
+\begin{frame}{Problem}
   \textbf{Given} a video, \textbf{produce} a box around each pedestrian in every
   frame, with the \alert{same identity number} following the same person.
   \vspace{1.2em}
@@ -109,7 +105,7 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{System architecture}
+\begin{frame}{System Architecture}
   \centering
   \begin{tikzpicture}[node distance=0.52cm]
     \node[io]                        (frames) {Video\\frames};
@@ -178,7 +174,7 @@
 
 \begin{frame}{What the detector actually sees}
   \centering
-  \slidefigure[0.68\linewidth]{fig1_detection.png}
+  \slidefigure[0.36\linewidth]{fig1_detection.png}
 
   \vspace{0.3em}
   {\footnotesize Frame 1 of MOT16-02: ground truth above, our detections below.
@@ -186,7 +182,7 @@
   hidden people. That is where the missing 60\% of recall goes.}
 \end{frame}
 
-\begin{frame}{The association problem}
+\begin{frame}{Association Problem}
   Each frame gives $N$ detections and we are holding $M$ tracks. Which detection
   continues which track?
   \vspace{0.9em}
@@ -223,7 +219,7 @@
 \end{frame}
 
 % ─────────────────────────────────────────── Geethika: data
-\begin{frame}{The MOT16 dataset}
+\begin{frame}{The MOT16 Dataset}
   \begin{columns}[T,onlytextwidth]
     \column{0.48\textwidth}
       \begin{itemize}
@@ -274,7 +270,7 @@
   wrote the tests first because neither failure produces an obvious symptom.
 \end{frame}
 
-\begin{frame}{Data augmentation}
+\begin{frame}{Data Augmentation}
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
       {\small MOT16 gives us few scenes, so the model can memorise those scenes
@@ -331,11 +327,11 @@
   \vspace{1.0em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.44\textwidth}
+    \column{0.41\textwidth}
       {\footnotesize Four convolution blocks, adaptive pooling, then a
       128-dimensional L2-normalised embedding. 1.5\,M parameters, so it trains
       in minutes.}
-    \column{0.50\textwidth}
+    \column{0.6\textwidth}
       \begin{block}{Contrastive loss}
         \vspace{-0.7em}
         \[
@@ -353,7 +349,7 @@
   \begin{columns}[T,onlytextwidth]
     \column{0.5\textwidth}
       \slidefigure{fig2_reid_training.png}
-    \column{0.48\textwidth}
+    \column{0.5\textwidth}
       \slidefigure{fig3_reid_similarity.png}
   \end{columns}
   \vspace{0.4em}
@@ -459,7 +455,7 @@
 
 \begin{frame}{Coverage across every person}
   \centering
-  \slidefigure[0.88\linewidth]{fig4_coverage.png}
+  \slidefigure[0.95\linewidth]{fig4_coverage.png}
 
   \vspace{0.2em}
   {\footnotesize Best single-ID coverage for each of the 44 people visible for
@@ -513,10 +509,10 @@
 \end{frame}
 
 \begin{frame}{A bug we found, fixed, and then turned off}
-  \textbf{Symptom:} 176 track IDs for 54 real people. \textbf{And a real bug:}
+  \textbf{Symptom:} 176 track IDs for 54 real people. \textbf{Bug:}
   with an \emph{identical} appearance embedding, a five-frame gap lost the
   identity, because the track's box froze and appearance was never consulted.
-  \vspace{0.7em}
+  \vspace{0.1em}
 
   \begin{columns}[T,onlytextwidth]
     \column{0.47\textwidth}
@@ -530,20 +526,20 @@
         + re-acquisition      & 54  & 0.212 & \alert{421} \\
         \bottomrule
       \end{tabular}}
-      \vspace{0.5em}
+      \vspace{0.1em}
 
       {\footnotesize 54 IDs for 54 people looks perfect. It is not: the same
       IDs are passed between people.}
-    \column{0.49\textwidth}
+    \column{0.50\textwidth}
       \begin{alertblock}{Two ways to be wrong}
         {\footnotesize
         \textbf{Splitting:} one person, several IDs. Costs one interruption.
-        \vspace{0.3em}
+        \vspace{0.1em}
 
         \textbf{Merging:} one ID, several people. You follow it confidently
         onto the wrong person. Costs two trajectories.}
       \end{alertblock}
-      \vspace{0.3em}
+      \vspace{0.1em}
 
       {\footnotesize Only 40\% of people are detected, so most
       ``reappearances'' are strangers. Both features ship disabled.}
@@ -552,7 +548,7 @@
 
 \begin{frame}{Demo}
   \centering
-  \slidefigure[0.84\linewidth]{fig5_target_strip.png}
+  \slidefigure[0.78\linewidth]{fig5_target_strip.png}
 
   \vspace{0.3em}
   {\footnotesize \texttt{demo\_target\_clip.mp4}, 8 seconds. Target in colour,
