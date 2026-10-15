@@ -41,10 +41,13 @@
     \includegraphics[width=#1]{figures/#2}%
   }{%
     \begin{tikzpicture}
+      % \detokenize: the filenames contain underscores, which LaTeX would
+      % otherwise read as subscripts and refuse to typeset in text mode.
       \node[draw=gray!50, dashed, fill=gray!8, minimum width=0.85\linewidth,
             minimum height=2.4cm, align=center, font=\scriptsize\ttfamily,
             text=gray!60]
-        {figures/#2 \\[0.2em] run notebooks/midterm\_demo.ipynb};
+        {\detokenize{figures/#2} \\[0.2em]
+         \detokenize{run notebooks/midterm_demo.ipynb}};
     \end{tikzpicture}%
   }%
 }
@@ -86,25 +89,23 @@
   \begin{columns}[T,onlytextwidth]
     \column{0.47\textwidth}
       \textbf{Detection is not enough}
-      \vspace{0.3em}
 
-      A detector answers ``where are the people'' separately in each frame. It
-      has no way of knowing that the person in frame 10 is the person it saw in
-      frame 9.
+      {\small A detector answers ``where are the people'' separately in each
+      frame. It has no way of knowing that the person in frame 10 is the person
+      it saw in frame 9.}
     \column{0.47\textwidth}
       \textbf{Tracking adds identity}
-      \vspace{0.3em}
 
-      We have to link detections across frames, through occlusion, through
-      people crossing, and through frames where the detector misses someone
-      entirely.
+      {\small We have to link detections across frames, through occlusion,
+      through people crossing, and through frames where the detector misses
+      someone entirely.}
   \end{columns}
-  \vspace{1.2em}
+  \vspace{1.0em}
 
   \begin{alertblock}{Why identity, and not just location}
-    Autonomous driving, surveillance, sports analytics and robotics all need to
-    know \emph{which} person, and for how long. Our target: track at least one
-    pedestrian across an MOT16 sequence without losing them (rubric, grade A).
+    {\small Driving, surveillance, sports and robotics all need to know
+    \emph{which} person, and for how long. Our target: track one pedestrian
+    across an MOT16 sequence without losing them (rubric, grade A).}
   \end{alertblock}
 \end{frame}
 
