@@ -1,35 +1,13 @@
-# Speaking notes
-
-One entry per slide: who talks, roughly how long, and what to say.
-
-Fifteen minutes has to cover questions too, so we've got about thirteen and a
-half minutes of actual talking. Four minutes each would be sixteen, which
-doesn't fit. Ben takes a bit more because he opens and closes.
-
-| Speaker       | Slides     | Time |
-| ------------- | ---------- | ---- |
-| Ben (opening) | Title to 6 | 3:50 |
-| Geethika      | 7 to 9     | 2:30 |
-| Tina          | 10 to 12   | 2:40 |
-| Sanjana       | 13 to 16   | 2:45 |
-| Ben (closing) | 17 to 20   | 1:45 |
-
-Don't memorise this. Learn what each slide is for and the numbers you can't get
-wrong, then say it your own way.
-
----
-
 ## Ben, opening (3:50)
 
 ### Title | 10 sec
 
-> Morning. We're Group 4, and we've been working on video object tracking on
+> Hello. We're Group 4, and we've been working on video object tracking on
 > MOT16. I'll start, and we'll each take our own part.
 
 ### Slide 1, Team | 20 sec
 
-> We split this four ways, and each of us owns a piece end to end: the code,
-> the slides, and our section of the report. I did detection and tracking,
+> We split the project four ways. I did detection and tracking,
 > Geethika the data pipeline, Tina re-identification, Sanjana evaluation and
 > the demo.
 
