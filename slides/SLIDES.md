@@ -6,13 +6,13 @@ Fifteen minutes has to cover questions too, so we've got about thirteen and a
 half minutes of actual talking. Four minutes each would be sixteen, which
 doesn't fit. Ben takes a bit more because he opens and closes.
 
-| Speaker | Slides | Time |
-| --- | --- | --- |
+| Speaker       | Slides     | Time |
+| ------------- | ---------- | ---- |
 | Ben (opening) | Title to 6 | 3:50 |
-| Geethika | 7 to 9 | 2:30 |
-| Tina | 10 to 12 | 2:40 |
-| Sanjana | 13 to 16 | 2:45 |
-| Ben (closing) | 17 to 20 | 1:45 |
+| Geethika      | 7 to 9     | 2:30 |
+| Tina          | 10 to 12   | 2:40 |
+| Sanjana       | 13 to 16   | 2:45 |
+| Ben (closing) | 17 to 20   | 1:45 |
 
 Don't memorise this. Learn what each slide is for and the numbers you can't get
 wrong, then say it your own way.
@@ -274,43 +274,21 @@ wrong, then say it your own way.
 > disambiguate. That's our argument for fine-tuning the detector, and it's what
 > we're doing next.
 >
-> Ben's got one more result to finish on.
+> Ben's got the demo to finish on.
 
 ---
 
 ## Ben, closing (1:45)
 
-### Slide 17, A bug we found, fixed, and then turned off | 1:00
+### Slide 17, Demo | 25 sec
 
-> One last thing, because it's the most interesting thing we learned.
->
-> We end up with 176 track IDs for 54 real people, which looks like a bug, and
-> there was one. Even with an identical appearance vector, a five-frame gap was
-> enough to lose the identity. The track's box stayed where the person used to
-> be, and the overlap check threw the match out before appearance was ever
-> looked at.
->
-> So we fixed it, and the fix made things worse. Bottom row: 54 IDs for 54
-> people, which looks perfect, except ID switches nearly triple. It isn't
-> giving each person their own ID. It's handing the same IDs around between
-> different people.
->
-> It comes back to recall. We only detect 40% of people, so most of the time
-> someone "reappears" it's actually a stranger we never saw arrive, and our
-> re-ID network is 93% accurate, not perfect. Splitting one person across a few
-> IDs costs you one break in the thread. Merging two people under one ID wrecks
-> both of them. At this recall the cautious version wins, so we've left both
-> features switched off.
-
-### Slide 18, Demo | 25 sec
-
-> And here's what it actually looks like. Eight seconds, target in colour and
+> And here's what it looks like. Eight seconds, target in colour and
 > everything else in grey.
 
 > **[Switch to `demo_target_clip.mp4`. Let it run without talking over it, then
-> come back to the slides.]**
+> > come back to the slides.]**
 
-### Slide 19, Timeline to the final | 20 sec
+### Slide 18, Timeline to the final | 20 sec
 
 > Where we are: it runs end to end, everything we've shown is measured rather
 > than estimated, and there are 78 tests behind it.
@@ -320,47 +298,5 @@ wrong, then say it your own way.
 > is a statement about this recall level and not a permanent one. Then the
 > final video on a test sequence, and the report.
 
-### Slide 20, Questions | whatever's left
-
-> That's us. Happy to take questions.
-
 ---
 
-## Handovers
-
-One sentence, name the next person and what they're covering.
-
-- Ben to Geethika: *"Geethika's going to talk about the data underneath all this."*
-- Geethika to Tina: *"Tina's got the re-identification side."*
-- Tina to Sanjana: *"Sanjana's going to cover how we measure all this."*
-- Sanjana to Ben: *"Ben's got one more result to finish on."*
-
-## Numbers to get right
-
-| Claim | Value |
-| --- | --- |
-| Target coverage | 94.8%, 218 of 230 frames |
-| Median coverage | 22.4% across 44 people |
-| MOTA / MOTP | 0.232 / 0.792 |
-| Recall | about 0.40 |
-| Re-ID accuracy | 0.535 to 0.932 |
-| Trainable parameters | 14.5 M of 41.3 M, 35% |
-| Unique IDs vs real people | 176 vs 54 |
-| Tests | 78 |
-
-**Don't say 97.2%.** An earlier version of the deck had it. It came from the
-longest-surviving track, and on a re-run it dropped to 73.0% with nothing else
-changing. 94.8% is the one that holds still.
-
-## If we're running long
-
-Drop these, in this order. Each one stands alone, so nothing afterwards stops
-making sense:
-
-1. Slide 9, Data Augmentation. Geethika mentions it in passing on slide 8.
-2. Slide 15, Coverage across every person. The median is already on slide 14.
-3. Slide 3, System Architecture. The pieces get introduced as they come up.
-
-Don't drop 12, 16 or 18. Those are the ones that show we understood what we
-were doing rather than followed a tutorial, which is what the assignment is
-actually asking for.
