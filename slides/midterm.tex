@@ -416,19 +416,19 @@
 \begin{frame}{Results: first end-to-end run}
   MOT16-02, 600 frames, on a Colab T4. COCO-pretrained detector, \textbf{no
   fine-tuning yet}; re-identification trained for 8 epochs on MOT16 crops.
-  \vspace{0.7em}
+  \vspace{0.2em}
 
   \begin{columns}[T,onlytextwidth]
-    \column{0.46\textwidth}
+    \column{0.5\textwidth}
       \begin{alertblock}{Against the rubric}
         {\small One real pedestrian is held by a single id for \textbf{218 of
         the 230 frames they appear in (94.8\%)}, before any fine-tuning.
-        \vspace{0.3em}
+        \vspace{0.1em}
 
         But the \textbf{median across 44 people is 22.4\%}. One person is
         tracked well; most are not.}
       \end{alertblock}
-      \vspace{0.3em}
+      \vspace{0.2em}
       {\footnotesize Measured against the ground-truth person, not whichever
       track lived longest. Re-ID accuracy 0.535 $\rightarrow$ 0.932, 4.0 FPS.}
     \column{0.48\textwidth}
@@ -445,7 +445,7 @@
           ID switches     & 151 \\
           \bottomrule
         \end{tabular}}
-        \vspace{0.3em}
+        \vspace{0.2em}
 
         {\footnotesize MOTP 0.792 means the boxes are tight. MOTA is held down
         almost entirely by false negatives.}
