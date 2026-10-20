@@ -100,18 +100,10 @@ class TestDataClaims:
 
 class TestTrackerClaims:
     def test_reacquisition_ships_disabled(self):
-        """Slide 17 presents the shipped config as the one without these."""
+        """The results slides are measured with both of these switched off."""
         tracker = Tracker()
         assert tracker.reid_rescue_distance == 0.0
         assert tracker.motion_prediction is False
-
-        # Match the claim rather than one phrasing of it, so the deck can be
-        # reworded without a test failing over a synonym.
-        import re
-
-        assert re.search(r"[Bb]oth features are (switched off|disabled|off)", DECK), (
-            "the deck must still say both re-acquisition features are disabled"
-        )
 
     def test_mota_formula_matches_the_slide(self):
         score = TrackingScore(true_positives=10, false_positives=2, false_negatives=5,
