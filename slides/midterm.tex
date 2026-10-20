@@ -508,45 +508,6 @@
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{A bug we found, fixed, and then turned off}
-  \textbf{Symptom:} 176 track IDs for 54 real people. \textbf{Bug:}
-  with an \emph{identical} appearance embedding, a five-frame gap lost the
-  identity, because the track's box froze and appearance was never consulted.
-  \vspace{0.1em}
-
-  \begin{columns}[T,onlytextwidth]
-    \column{0.47\textwidth}
-      {\footnotesize
-      \begin{tabular}{lrrr}
-        \toprule
-        Configuration & IDs & MOTA & IDSW \\
-        \midrule
-        \textbf{What we ship} & 176 & \textbf{0.232} & \textbf{151} \\
-        + motion prediction   & 206 & 0.233 & 153 \\
-        + re-acquisition      & 54  & 0.212 & \alert{421} \\
-        \bottomrule
-      \end{tabular}}
-      \vspace{0.1em}
-
-      {\footnotesize 54 IDs for 54 people looks perfect, but the same IDs
-      are being handed around between people.}
-    \column{0.50\textwidth}
-      \begin{alertblock}{Two ways to be wrong}
-        {\footnotesize
-        \textbf{Splitting:} one person picks up several IDs. You lose the
-        thread once and start a new one.
-        \vspace{0.1em}
-
-        \textbf{Merging:} one ID lands on several people. You keep following
-        it onto the wrong person, and two trajectories are now wrong.}
-      \end{alertblock}
-      \vspace{0.1em}
-
-      {\footnotesize We only detect 40\% of people, so most
-      ``reappearances'' are strangers. Both features are switched off.}
-  \end{columns}
-\end{frame}
-
 \begin{frame}{Demo}
   \centering
   \slidefigure[0.78\linewidth]{fig5_target_strip.png}
